@@ -18,6 +18,9 @@ suspend fun main() {
         if (relogin) println("relogin success")
         else println("login success")
     }
-    client.connect()
+    var self = client.connect()
+    self.guilds.cachedValue?.forEach {
+        it.cachedValue?.defaultChannel?.cachedValue?.sendMessage("hello");
+    }
     awaitCancellation()
 }

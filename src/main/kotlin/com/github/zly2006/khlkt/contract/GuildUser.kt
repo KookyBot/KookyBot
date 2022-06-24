@@ -1,7 +1,12 @@
 package com.github.zly2006.khlkt.contract
 
-class PrivateChatUser(
+import com.github.zly2006.khlkt.utils.Cache
+
+class GuildUser(
+    id: String,
+    oline: Boolean,
     name: String,
+    val nickname: String,
     identifyNumber: String,
     status: UserState,
     bot: Boolean,
@@ -9,11 +14,11 @@ class PrivateChatUser(
     avatarUrl: String,
     vipAvatarUrl: String,
     isVip: Boolean,
-    id: String,
-    oline: Boolean,
+    @Transient
+    val roles: Cache<List<Cache<GuildRole>>>,
     joinTime: Int,
-    activeTime: Int
-): User(id,
+    activeTime: Int,
+) : User(id,
     oline,
     name,
     identifyNumber,
@@ -24,4 +29,5 @@ class PrivateChatUser(
     vipAvatarUrl,
     isVip,
     joinTime,
-    activeTime)
+    activeTime) {
+}

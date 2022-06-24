@@ -1,5 +1,8 @@
 package com.github.zly2006.khlkt.contract
 
+import com.github.zly2006.khlkt.message.Message
+import com.google.gson.annotations.SerializedName
+
 /**
  * 警告：
  * 此类型不会自动更新。
@@ -8,19 +11,31 @@ package com.github.zly2006.khlkt.contract
  * @see com.github.zly2006.khlkt.contract.Self#getUser(String kotlin.userId)
  */
 open class User(
-    val id: Int,
+    override val id: String,
     val oline: Boolean,
     val name: String,
-    val identifyNumber: Int,
-    val status: UserState,
+    @SerializedName("identify_num")
+    val identifyNumber: String,
+    @Transient
+    var status: UserState,
     val bot: Boolean,
+    @SerializedName("mobile_verified")
     val mobilePhoneVerified: Boolean,
+    @SerializedName("avatar")
     val avatarUrl: String,
+    @SerializedName("vip_avatar")
     val vipAvatarUrl: String,
     /**
      * 不要使用，正在试图修复兼容性问题
      */
-    val isVip: Boolean
-) {
-
+    @SerializedName("is_vip")
+    val isVip: Boolean,
+    @SerializedName("joined_at")
+    val joinTime: Int,
+    @SerializedName("active_time")
+    val activeTime: Int,
+): MessageReceiver() {
+    override fun sendMessage(message: Message) {
+        TODO("Not yet implemented")
+    }
 }
