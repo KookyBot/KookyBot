@@ -18,6 +18,7 @@ dependencies {
     implementation("com.google.code.gson","gson","2.8.9")
     implementation("org.jetbrains.kotlinx","kotlinx-coroutines-core","1.6.3")
     implementation("com.fasterxml.jackson.core", "jackson-databind", "2.9.6")
+    implementation("io.javalin", "javalin", "4.6.3")
 }
 
 tasks.test {

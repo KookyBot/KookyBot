@@ -11,6 +11,7 @@ import com.github.zly2006.khlkt.exception.KhlRemoteException
 import com.github.zly2006.khlkt.message.Message
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import io.javalin.Javalin
 import kotlinx.coroutines.*
 import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
@@ -22,6 +23,7 @@ import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
 import java.util.*
 import java.util.concurrent.TimeUnit
+import java.util.zip.InflaterInputStream
 
 class Client (var token : String) {
     val debug = true
@@ -248,6 +250,44 @@ class Client (var token : String) {
                 status = State.FatalError
                 e.printStackTrace()
             }
+        }
+    }
+
+    private fun whInit(host: String, port: Int, path: String, verifyToken: String = "") {
+        val app = Javalin.create().start(host, port)
+        app.post(path) { ctx ->
+            val text = InflaterInputStream(ctx.bodyAsBytes().inputStream()).bufferedReader().use { it.readText() }
+            var json = Gson().fromJson(text, JsonObject::class.java)
+            if (json["s"].asInt != 0) return@post
+            json = json["d"].asJsonObject
+            if (verifyToken.isNotEmpty()) {
+                if (json["verify_token"].asString != verifyToken) return@post
+            }
+            val event = Gson().fromJson(json, Event::class.java)
+            if (event.eventType == Event.EventType.SYSTEM) {
+                if (json["channel_type"].asString == "WEBHOOK_CHALLENGE") {
+                    val challenge = json["challenge"].asString
+                    ctx.contentType("application/json").result("{\"challenge\":\"$challenge\"}")
+                    println("[Khl] Received WEBHOOK_CHALLENGE request, challenge: $challenge, Responded")
+                    self = Self(client = this@Client)
+                }
+            }
+        }
+    }
+
+    private suspend fun getWhSelf(): Self {
+        while (true) {
+            if (self != null) return self!!
+            delay(100L)
+        }
+    }
+
+    suspend fun start(host: String = "", port: Int = 0, path: String = "", verifyToken: String = ""): Self {
+        return if (host.isEmpty()) {
+            connect()
+        } else {
+            whInit(host, port, path, verifyToken)
+            getWhSelf()
         }
     }
 
