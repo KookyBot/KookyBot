@@ -1,17 +1,23 @@
 package updatable
 
+import com.github.zly2006.khlkt.utils.DontUpdate
 import com.github.zly2006.khlkt.utils.Updatable
 import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 
 class UpdatableTest(
     var ccc: Int = 0,
     val ddd: Int = 0
-):Updatable(){
+):Updatable {
     var aaa: Int = 0
     val bbb: Int = 0
     var eee = false
     var fff = 1.0
+    @field:SerializedName("s")
     var ggg = ""
+    var sss = listOf("")
+    @field:DontUpdate
+    var no = "no"
 }
 fun main() {
     var t = UpdatableTest()
@@ -23,7 +29,9 @@ fun main() {
             "ddd" to 4,
             "eee" to true,
             "fff" to -1,
-            "ggg" to "test success"
+            "s" to "test success",
+            "sss" to "",
+            "no" to "yes"
         ))
     )
     println(t.aaa)
@@ -33,4 +41,6 @@ fun main() {
     println(t.eee)
     println(t.fff)
     println(t.ggg)
+    println(t.sss.size)
+    println(t.no)
 }

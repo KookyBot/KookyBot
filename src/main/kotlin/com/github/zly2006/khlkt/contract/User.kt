@@ -14,25 +14,25 @@ open class User(
     override val id: String,
     val oline: Boolean,
     val name: String,
-    @SerializedName("identify_num")
+    @field:SerializedName("identify_num")
     val identifyNumber: String,
-    @Transient
+    @field:Transient
     var status: UserState,
     val bot: Boolean,
-    @SerializedName("mobile_verified")
+    @field:SerializedName("mobile_verified")
     val mobilePhoneVerified: Boolean,
-    @SerializedName("avatar")
+    @field:SerializedName("avatar")
     val avatarUrl: String,
-    @SerializedName("vip_avatar")
+    @field:SerializedName("vip_avatar")
     val vipAvatarUrl: String,
     /**
      * 不要使用，正在试图修复兼容性问题
      */
-    @SerializedName("is_vip")
+    @field:SerializedName("is_vip")
     val isVip: Boolean,
-    @SerializedName("joined_at")
+    @field:SerializedName("joined_at")
     val joinTime: Int,
-    @SerializedName("active_time")
+    @field:SerializedName("active_time")
     val activeTime: Int,
 ): MessageReceiver() {
     override fun sendMessage(message: Message) {

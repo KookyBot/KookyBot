@@ -3,19 +3,19 @@ package com.github.zly2006.khlkt.events
 import com.google.gson.annotations.SerializedName
 
 open class Event(
-    @SerializedName("channel_type")
+    @field:SerializedName("channel_type")
     private var _channelType: String,
-    @SerializedName("type")
+    @field:SerializedName("type")
     private var _type: Int,
-    @SerializedName("target_id")
+    @field:SerializedName("target_id")
     var targetId: String,
-    @SerializedName("author_id")
+    @field:SerializedName("author_id")
     var authorId: String,
-    @SerializedName("content")
+    @field:SerializedName("content")
     var content: String,
-    @SerializedName("message_id")
+    @field:SerializedName("message_id")
     var sid: String,
-    @SerializedName("msg_timestamp")
+    @field:SerializedName("msg_timestamp")
     var timestamp: String
 ) {
     enum class EventType(i: Int) {

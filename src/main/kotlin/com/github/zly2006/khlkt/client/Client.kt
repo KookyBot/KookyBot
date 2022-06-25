@@ -8,7 +8,6 @@ import com.github.zly2006.khlkt.data
 import com.github.zly2006.khlkt.events.ChannelMessageEvent
 import com.github.zly2006.khlkt.events.Event
 import com.github.zly2006.khlkt.exception.KhlRemoteException
-import com.github.zly2006.khlkt.message.Message
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.javalin.Javalin
@@ -26,16 +25,15 @@ import java.util.concurrent.TimeUnit
 import java.util.zip.InflaterInputStream
 
 class Client (var token : String) {
-    val debug = true
-    var lastSn = -1
-    var sessionId = ""
+    private val debug = true
+    private var lastSn = -1
+    private var sessionId = ""
     var pingDelay = 0L
-    var messageHandler: (Client.(Message) -> Unit)? = null
-    var loginHandler: (Client.(Boolean) -> Unit)? = null
     var status = State.Initialized
     var pingStatus = PingState.Success
     var self: Self? = null
-    var webSocketClient: WebSocketClient? = null
+    private var webSocketClient: WebSocketClient? = null
+    private val httpClient = HttpClient.newHttpClient()
 
     private var pingStart = Calendar.getInstance().timeInMillis
     private var pingJob: Job = GlobalScope.launch {
@@ -47,7 +45,6 @@ class Client (var token : String) {
         } catch (_: Exception) {
         }
     }
-    private val httpClient = HttpClient.newHttpClient()
 
     /**
      * 警告：
@@ -160,7 +157,7 @@ class Client (var token : String) {
         webSocketClient!!.send("{\"s\":4,\"sn\":$lastSn}")
     }
 
-    suspend fun connect(): Self {
+    private suspend fun connect(): Self {
         while (true) {
             try {
                 var url = sendRequest(requestBuilder(GATEWAY)).asJsonObject.get("url").asString
@@ -179,6 +176,10 @@ class Client (var token : String) {
                                 }
                                 lastSn = json.get("sn").asInt
                                 json = json["d"].asJsonObject
+                                /*
+                                此处以下，转移至handler.callEvent
+                                -- zly2006
+                                 */
                                 val event = Gson().fromJson(json, Event::class.java)
                                 if (event.eventType == Event.EventType.SYSTEM) {
                                     // TODO
@@ -187,12 +188,13 @@ class Client (var token : String) {
                                     return
                                 else if (event.channelType == Event.ChannelType.GROUP) {
                                     val channelMessageEvent = Gson().fromJson(json, ChannelMessageEvent::class.java)
-                                    var guild = self!!.guilds.cachedValue?.filter { it.cachedValue?.id == json["extra"].asJsonObject["guild_id"].asString }?.firstOrNull()
+                                    val guild = self!!.guilds.filter { it.id == json["extra"].asJsonObject["guild_id"].asString }
+                                        .firstOrNull()
                                     channelMessageEvent.guild = guild!!
-                                    var channel = guild.cachedValue!!.channels.filter { it.cachedValue?.id == json["target_id"].asString }.firstOrNull()
+                                    val channel = guild.channels.filter { it.id == json["target_id"].asString }.firstOrNull()
                                     channelMessageEvent.channel = channel!!
                                     if (channelMessageEvent.content == "hello") {
-                                        channel.cachedValue!!.sendMessage("hello")
+                                        channel.sendMessage("hello")
                                     }
                                 }
                             }
@@ -202,9 +204,8 @@ class Client (var token : String) {
                                     0 -> {
                                         println("hello received: ok")
                                         status = State.Connected
-                                        loginHandler?.let { it(false) }
                                         sessionId = json.get("d").asJsonObject.get("session_id").asString
-                                        self = Self(client = this@Client)
+                                        self = Self(this@Client)
                                     }
                                     else -> {
                                         throw Exception("khl login failed: code is $code\n  @see <https://developer.kaiheila.cn/doc/websocket>")
@@ -255,6 +256,7 @@ class Client (var token : String) {
 
     private fun whInit(host: String, port: Int, path: String, verifyToken: String = "") {
         val app = Javalin.create().start(host, port)
+        status = State.Connecting
         app.post(path) { ctx ->
             val text = InflaterInputStream(ctx.bodyAsBytes().inputStream()).bufferedReader().use { it.readText() }
             var json = Gson().fromJson(text, JsonObject::class.java)
@@ -269,6 +271,7 @@ class Client (var token : String) {
                     val challenge = json["challenge"].asString
                     ctx.contentType("application/json").result("{\"challenge\":\"$challenge\"}")
                     println("[Khl] Received WEBHOOK_CHALLENGE request, challenge: $challenge, Responded")
+                    status = State.Connected
                     self = Self(client = this@Client)
                 }
             }
@@ -304,7 +307,7 @@ class Client (var token : String) {
         return user
     }
 
-    fun getServerUser(userId: String, guildId: String): GuildUser {
+    fun getGuildUser(userId: String, guildId: String): GuildUser {
         var jsonObject = sendRequest(requestBuilder(USER_VIEW, mapOf("user_id" to userId, "guild_id" to guildId))).asJsonObject
         if (!jsonObject.has("vip_avatar")) {
             jsonObject.addProperty("vip_avatar", "")

@@ -1,6 +1,6 @@
 package com.github.zly2006.khlkt.contract
 
-import com.github.zly2006.khlkt.utils.Cache
+import com.github.zly2006.khlkt.utils.Updatable
 
 class GuildUser(
     id: String,
@@ -14,8 +14,8 @@ class GuildUser(
     avatarUrl: String,
     vipAvatarUrl: String,
     isVip: Boolean,
-    @Transient
-    val roles: Cache<List<Cache<GuildRole>>>,
+    @field:Transient
+    val roles: List<GuildRole>,
     joinTime: Int,
     activeTime: Int,
 ) : User(id,
@@ -29,5 +29,5 @@ class GuildUser(
     vipAvatarUrl,
     isVip,
     joinTime,
-    activeTime) {
+    activeTime), Updatable {
 }

@@ -1,5 +1,7 @@
 package com.github.zly2006.khlkt.contract
 
+import com.github.zly2006.khlkt.utils.Updatable
+
 class PrivateChatUser(
     name: String,
     identifyNumber: String,
@@ -24,4 +26,4 @@ class PrivateChatUser(
     vipAvatarUrl,
     isVip,
     joinTime,
-    activeTime)
+    activeTime), Updatable

@@ -1,5 +1,7 @@
 package com.github.zly2006.khlkt.contract
 
+import com.github.zly2006.khlkt.utils.Updatable
+
 data class GuildRole (
     val id: Int,
     var name: String,
@@ -8,4 +10,4 @@ data class GuildRole (
     var hoist: Int,
     var mentionable: Int,
     var permissions: Int,
-)
+): Updatable
