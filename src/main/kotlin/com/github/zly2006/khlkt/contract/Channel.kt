@@ -1,6 +1,7 @@
 package com.github.zly2006.khlkt.contract
 
 import com.github.zly2006.khlkt.client.Client
+import com.github.zly2006.khlkt.message.CardMessage
 import com.github.zly2006.khlkt.message.MarkdownMessage
 import com.github.zly2006.khlkt.message.Message
 import com.github.zly2006.khlkt.utils.Cache
@@ -69,6 +70,13 @@ class Channel(
                 target = this
             )
         }
+        if (message is CardMessage) {
+            client.sendChannelMessage(
+                type = 10,
+                content = message.content(),
+                target = this
+            )
+        }
     }
     fun sendMessage(message: String) {
         client.sendChannelMessage(
@@ -79,5 +87,12 @@ class Channel(
 
     fun sendMarkdownMessage(message: String) {
         sendMessage(MarkdownMessage(client, message, this))
+    }
+
+    fun sendCardMessage(content: CardMessage.MessageScope.() -> Unit) {
+        var msg = CardMessage(client = client,
+            primaryReceiver = this,
+            contentBuilder = content)
+        sendMessage(msg)
     }
 }

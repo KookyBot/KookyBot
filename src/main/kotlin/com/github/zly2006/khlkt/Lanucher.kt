@@ -1,9 +1,11 @@
-
+package com.github.zly2006.khlkt
 import com.github.zly2006.khlkt.client.Client
 import kotlinx.coroutines.awaitCancellation
 import java.io.File
 
 suspend fun main() {
+
+
     if (!File("data/").exists())
         File("data/").mkdir()
     if (!File("data/token.txt").isFile) {
@@ -20,7 +22,19 @@ suspend fun main() {
     }
     var self = client.connect()
     self.guilds.cachedValue?.forEach {
-        it.cachedValue?.defaultChannel?.cachedValue?.sendMessage("hello");
+        it.cachedValue?.defaultChannel?.cachedValue?.sendCardMessage {
+            Card {
+                HeaderModule(anElement { PlainTextElement("标题") })
+                SectionModule(
+                    accessory = anElement { ButtonElement(text = anElement { PlainTextElement("Hello") }) },
+                    text = anElement { PlainTextElement("hello") }
+                )
+                Divider()
+                ContextModule {
+                    MarkdownElement(content = "> reference\n")
+                }
+            }
+        }
     }
     awaitCancellation()
 }

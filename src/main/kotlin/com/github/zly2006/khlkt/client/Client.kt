@@ -1,3 +1,5 @@
+@file:OptIn(DelicateCoroutinesApi::class)
+
 package com.github.zly2006.khlkt.client
 
 import com.github.zly2006.khlkt.client.Client.RequestType.*
@@ -5,13 +7,11 @@ import com.github.zly2006.khlkt.contract.*
 import com.github.zly2006.khlkt.data
 import com.github.zly2006.khlkt.events.ChannelMessageEvent
 import com.github.zly2006.khlkt.events.Event
+import com.github.zly2006.khlkt.exception.KhlRemoteException
 import com.github.zly2006.khlkt.message.Message
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
 import java.io.IOException
@@ -52,7 +52,7 @@ class Client (var token : String) {
      * 强烈不建议使用，请使用封装好的内容
      * 使用不当，后果自负
      */
-    public enum class RequestType {
+    enum class RequestType {
         GATEWAY,
         GATEWAY_RESUME,
         GUILD_LIST,
@@ -93,8 +93,8 @@ class Client (var token : String) {
         }
     }
 
-    fun apiOf(path: String): String {
-        return data.baseApiUrl + path;
+    private fun apiOf(path: String): URI {
+        return URI(data.baseApiUrl + path)
     }
 
     private fun postAll(values: Map<String, Any?>): HttpRequest.BodyPublisher? {
@@ -123,35 +123,17 @@ class Client (var token : String) {
     fun requestBuilder(requestType: RequestType, values: Map<String, Any?>? = null): HttpRequest {
         var builder = HttpRequest.newBuilder().header("Authorization", "Bot $token");
         when (requestType) {
-            GATEWAY -> {
-                builder.uri(URI(apiOf("/gateway/index?compress=0"))).GET()
-            }
-            GATEWAY_RESUME -> {
-                builder.uri(URI(apiOf("/gateway/index?compress=0&sn=$lastSn&resume=1&session_id=$sessionId"))).GET()
-            }
-            GUILD_LIST -> {
-                builder.uri(URI(apiOf("/guild/list"))).GET()
-            }
-            GUILD_VIEW -> {
-                builder.uri(URI(apiOf("/guild/view?guild_id=${values!!["guild_id"]}"))).GET()
-            }
-            USER_VIEW -> {
-                builder.uri(URI(apiOf("/user/view?user_id=${values!!["user_id"]}"))).GET()
-            }
-            SEND_CHANNEL_MESSAGE -> {
-                builder.uri(URI(apiOf("/message/create")))
-                    .header("content-type", "application/json")
-                    .POST(postAll(values!!))
-            }
-            LIST_GUILD_ROLE -> {
-                builder.uri(URI(apiOf("/guild-role/list?guild_id=${values!!["guild_id"]}"))).GET()
-            }
-            USER_ME -> {
-                builder.uri(URI(apiOf("/user/me"))).GET()
-            }
-            VIEW_CHANNEL -> {
-                builder.uri(URI(apiOf("/channel/view?target_id=${values!!["channel_id"]}"))).GET()
-            }
+            GATEWAY -> builder.uri(apiOf("/gateway/index?compress=0")).GET()
+            GATEWAY_RESUME -> builder.uri(apiOf("/gateway/index?compress=0&sn=$lastSn&resume=1&session_id=$sessionId")).GET()
+            GUILD_LIST -> builder.uri(apiOf("/guild/list")).GET()
+            GUILD_VIEW -> builder.uri(apiOf("/guild/view?guild_id=${values!!["guild_id"]}")).GET()
+            USER_VIEW -> builder.uri(apiOf("/user/view?user_id=${values!!["user_id"]}")).GET()
+            SEND_CHANNEL_MESSAGE -> builder.uri(apiOf("/message/create"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
+            LIST_GUILD_ROLE -> builder.uri(apiOf("/guild-role/list?guild_id=${values!!["guild_id"]}")).GET()
+            USER_ME -> builder.uri(apiOf("/user/me")).GET()
+            VIEW_CHANNEL -> builder.uri(apiOf("/channel/view?target_id=${values!!["channel_id"]}")).GET()
             else -> throw Exception("todo")
         }
         return builder.build()
@@ -165,7 +147,7 @@ class Client (var token : String) {
                 return json.get("data").asJsonObject
             }
             else -> {
-                throw Exception("khl server returned an error[${json.get("code").asInt}]: ${json.get("message").asString}")
+                throw KhlRemoteException(json.get("code").asInt, json.get("message").asString, request)
             }
         }
     }
@@ -310,7 +292,6 @@ class Client (var token : String) {
             "nonce" to nonce,
             "content" to content,
             "quote" to quote,
-            "guild_id" to target.guild.cachedValue?.id
         )))
     }
 }

@@ -37,8 +37,6 @@ class Self(
                     if (!g.get("enable_open").asBoolean)
                         guild.openId = null
 
-                    // channels
-                    // TODO
                     guild.channels = mutableListOf()
                     val list = g.get("channels").asJsonArray.map { it.asJsonObject.get("id").asString }.forEach {
                         guild.channels += cacheChannel(this@Cache, it)

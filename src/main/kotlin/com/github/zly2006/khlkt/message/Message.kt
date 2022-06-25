@@ -5,16 +5,9 @@ import com.github.zly2006.khlkt.contract.MessageReceiver
 
 open class Message(
     val client: Client,
-    val primaryReceiver: MessageReceiver
+    val primaryReceiver: MessageReceiver? = null
 ) {
     open fun content(): String {
         return ""
-    }
-    fun test() {
-        // TODO
-        CardMessage (client, primaryReceiver) {
-            AtAll
-            ""
-        }
     }
 }
