@@ -10,4 +10,8 @@ data class GuildRole (
     var hoist: Int,
     var mentionable: Int,
     var permissions: Int,
-): Updatable
+): Updatable {
+    override fun update() {
+        TODO("Not yet implemented")
+    }
+}

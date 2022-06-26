@@ -18,6 +18,6 @@ class ChannelMessageEvent(
     content: String,
     sid: String,
     timestamp: String
-): Event(_channelType, _type, targetId, authorId, content, sid, timestamp) {
+): MessageEvent(_channelType, _type, targetId, authorId, content, sid, timestamp) {
 
 }

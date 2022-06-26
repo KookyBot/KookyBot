@@ -3,6 +3,8 @@ package com.github.zly2006.khlkt.contract
 import com.github.zly2006.khlkt.client.Client
 import com.github.zly2006.khlkt.client.State
 import com.github.zly2006.khlkt.utils.DontUpdate
+import com.github.zly2006.khlkt.utils.Permission
+import com.github.zly2006.khlkt.utils.PermissionImpl
 import com.github.zly2006.khlkt.utils.Updatable
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
@@ -47,13 +49,9 @@ class Guild(
     var roleMap: Map<Int, GuildRole> = mapOf()
 
     val owner: User get() = client.getUser(masterId)
-    val botPermission: Int
-        get() {
-            return 0;
-            //TODO
-        }
+    val botPermission: Permission = PermissionImpl.Permissions.None
 
-    fun update() {
+    override fun update() {
         with(client) {
             if (status != State.Connected) return
             val g = client.sendRequest(requestBuilder(Client.RequestType.GUILD_VIEW,

@@ -8,8 +8,9 @@ import kotlin.reflect.javaType
 import kotlin.reflect.jvm.javaField
 
 interface Updatable {
+    fun update()
     @OptIn(ExperimentalStdlibApi::class)
-    open fun updateByJson(jsonElement: JsonElement) = if (jsonElement is JsonObject) {
+    fun updateByJson(jsonElement: JsonElement) = if (jsonElement is JsonObject) {
         this::class.members.forEach { it ->
             if (it is KMutableProperty1<*, *>) {
                 val name = it.javaField?.annotations?.filter { it.annotationClass == SerializedName::class }

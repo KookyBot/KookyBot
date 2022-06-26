@@ -30,4 +30,7 @@ class GuildUser(
     isVip,
     joinTime,
     activeTime), Updatable {
+    override fun update() {
+        TODO("Not yet implemented")
+    }
 }

@@ -26,4 +26,8 @@ class PrivateChatUser(
     vipAvatarUrl,
     isVip,
     joinTime,
-    activeTime), Updatable
+    activeTime), Updatable {
+    override fun update() {
+        TODO("Not yet implemented")
+    }
+}

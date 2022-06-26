@@ -1,6 +1,6 @@
 package com.github.zly2006.khlkt.events
 
-class SystemEvent(
+class SystemMessageEvent(
     _channelType: String,
     _type: Int,
     targetId: String,
@@ -8,5 +8,5 @@ class SystemEvent(
     content: String,
     sid: String,
     timestamp: String
-) : Event(_channelType, _type, targetId, authorId, content, sid, timestamp) {
+) : MessageEvent(_channelType, _type, targetId, authorId, content, sid, timestamp) {
 }

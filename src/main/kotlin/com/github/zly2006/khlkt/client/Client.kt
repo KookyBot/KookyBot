@@ -5,9 +5,11 @@ package com.github.zly2006.khlkt.client
 import com.github.zly2006.khlkt.client.Client.RequestType.*
 import com.github.zly2006.khlkt.contract.*
 import com.github.zly2006.khlkt.data
-import com.github.zly2006.khlkt.events.ChannelMessageEvent
-import com.github.zly2006.khlkt.events.Event
+import com.github.zly2006.khlkt.events.EventManager
+import com.github.zly2006.khlkt.events.MessageEvent
+import com.github.zly2006.khlkt.events.SelfOnlineEvent
 import com.github.zly2006.khlkt.exception.KhlRemoteException
+import com.github.zly2006.khlkt.utils.Updatable
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.javalin.Javalin
@@ -34,6 +36,9 @@ class Client (var token : String) {
     var self: Self? = null
     private var webSocketClient: WebSocketClient? = null
     private val httpClient = HttpClient.newHttpClient()
+    val eventManager: EventManager = EventManager(this)
+    private val updatableList: MutableList<Updatable> = mutableListOf()
+    private var updateJob: Job? = null
 
     private var pingStart = Calendar.getInstance().timeInMillis
     private var pingJob: Job = GlobalScope.launch {
@@ -176,27 +181,7 @@ class Client (var token : String) {
                                 }
                                 lastSn = json.get("sn").asInt
                                 json = json["d"].asJsonObject
-                                /*
-                                此处以下，转移至handler.callEvent
-                                -- zly2006
-                                 */
-                                val event = Gson().fromJson(json, Event::class.java)
-                                if (event.eventType == Event.EventType.SYSTEM) {
-                                    // TODO
-                                }
-                                if (event.authorId == self?.id)
-                                    return
-                                else if (event.channelType == Event.ChannelType.GROUP) {
-                                    val channelMessageEvent = Gson().fromJson(json, ChannelMessageEvent::class.java)
-                                    val guild = self!!.guilds.filter { it.id == json["extra"].asJsonObject["guild_id"].asString }
-                                        .firstOrNull()
-                                    channelMessageEvent.guild = guild!!
-                                    val channel = guild.channels.filter { it.id == json["target_id"].asString }.firstOrNull()
-                                    channelMessageEvent.channel = channel!!
-                                    if (channelMessageEvent.content == "hello") {
-                                        channel.sendMessage("hello")
-                                    }
-                                }
+                                eventManager.callEventRaw(json)
                             }
                             1 -> {
                                 var code = json["d"].asJsonObject["code"].asInt
@@ -261,20 +246,21 @@ class Client (var token : String) {
             val text = InflaterInputStream(ctx.bodyAsBytes().inputStream()).bufferedReader().use { it.readText() }
             var json = Gson().fromJson(text, JsonObject::class.java)
             if (json["s"].asInt != 0) return@post
-            json = json["d"].asJsonObject
+            json["d"].asJsonObject
             if (verifyToken.isNotEmpty()) {
                 if (json["verify_token"].asString != verifyToken) return@post
             }
-            val event = Gson().fromJson(json, Event::class.java)
-            if (event.eventType == Event.EventType.SYSTEM) {
-                if (json["channel_type"].asString == "WEBHOOK_CHALLENGE") {
-                    val challenge = json["challenge"].asString
-                    ctx.contentType("application/json").result("{\"challenge\":\"$challenge\"}")
-                    println("[Khl] Received WEBHOOK_CHALLENGE request, challenge: $challenge, Responded")
-                    status = State.Connected
-                    self = Self(client = this@Client)
-                }
+            val event = Gson().fromJson(json, MessageEvent::class.java)
+            if (event.eventType == MessageEvent.EventType.SYSTEM &&
+                json["channel_type"].asString == "WEBHOOK_CHALLENGE"
+            ) {
+                val challenge = json["challenge"].asString
+                ctx.contentType("application/json").result("{\"challenge\":\"$challenge\"}")
+                println("[Khl] Received WEBHOOK_CHALLENGE request, challenge: $challenge, Responded")
+                status = State.Connected
+                self = Self(client = this@Client)
             }
+            eventManager.callEventRaw(json)
         }
     }
 
@@ -286,12 +272,18 @@ class Client (var token : String) {
     }
 
     suspend fun start(host: String = "", port: Int = 0, path: String = "", verifyToken: String = ""): Self {
-        return if (host.isEmpty()) {
+        val self = if (host.isEmpty()) {
             connect()
         } else {
             whInit(host, port, path, verifyToken)
             getWhSelf()
         }
+        updateJob = GlobalScope.launch {
+            updatableList.forEach { it.update() }
+            delay(30 * 1000)
+        }
+        eventManager.callEvent(SelfOnlineEvent(self))
+        return self
     }
 
     fun getUser(userId: String): User {
@@ -313,7 +305,7 @@ class Client (var token : String) {
             jsonObject.addProperty("vip_avatar", "")
         }
         val guildUser = Gson().fromJson(jsonObject, GuildUser::class.java)
-        guildUser.status = when (jsonObject.get("atus").asInt) {
+        guildUser.status = when (jsonObject.get("status").asInt) {
             10 -> UserState.BANNED
             else -> UserState.NORMAL
         }

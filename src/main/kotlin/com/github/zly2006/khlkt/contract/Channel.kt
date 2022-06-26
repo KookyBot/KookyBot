@@ -91,7 +91,7 @@ class Channel(
         }
     }
 
-    fun update() {
+    override fun update() {
         with(client) {
             val channel = Gson().fromJson(sendRequest(requestBuilder(Client.RequestType.VIEW_CHANNEL,
                 mapOf("channel_id" to id))), JsonObject::class.java)
