@@ -1,3 +1,19 @@
+/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+Copyright (C) <year>  <name of author>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
+
 @file:OptIn(DelicateCoroutinesApi::class)
 
 package com.github.zly2006.khlkt.client
@@ -25,6 +41,20 @@ import java.net.http.HttpResponse.BodyHandlers
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.zip.InflaterInputStream
+
+enum class State {
+    Initialized,
+    Connecting,
+    Connected,
+    Disconnected,
+    FatalError,
+}
+
+enum class PingState {
+    Pinging,
+    Success,
+    Timeout,
+}
 
 class Client (var token : String) {
     private val debug = true
@@ -124,8 +154,16 @@ class Client (var token : String) {
         return BodyPublishers.ofString(ret.toString())
     }
 
+    fun requestBuilder(requestType: RequestType, vararg values: Pair<String, Any?>): HttpRequest {
+        val map = mutableMapOf<String, Any?>()
+        values.forEach {
+            map[it.first] = it.second
+        }
+        return requestBuilder(requestType, map)
+    }
+
     fun requestBuilder(requestType: RequestType, values: Map<String, Any?>? = null): HttpRequest {
-        var builder = HttpRequest.newBuilder().header("Authorization", "Bot $token");
+        val builder = HttpRequest.newBuilder().header("Authorization", "Bot $token")
         when (requestType) {
             GATEWAY -> builder.uri(apiOf("/gateway/index?compress=0")).GET()
             GATEWAY_RESUME -> builder.uri(apiOf("/gateway/index?compress=0&sn=$lastSn&resume=1&session_id=$sessionId")).GET()
@@ -135,6 +173,7 @@ class Client (var token : String) {
             SEND_CHANNEL_MESSAGE -> builder.uri(apiOf("/message/create"))
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
+            LIST_CHANNEL -> builder.uri(apiOf("/channel/list?target_id=${values!!["channel_id"]}")).GET()
             LIST_GUILD_ROLE -> builder.uri(apiOf("/guild-role/list?guild_id=${values!!["guild_id"]}")).GET()
             USER_ME -> builder.uri(apiOf("/user/me")).GET()
             VIEW_CHANNEL -> builder.uri(apiOf("/channel/view?target_id=${values!!["channel_id"]}")).GET()
@@ -165,7 +204,7 @@ class Client (var token : String) {
     private suspend fun connect(): Self {
         while (true) {
             try {
-                var url = sendRequest(requestBuilder(GATEWAY)).asJsonObject.get("url").asString
+                val url = sendRequest(requestBuilder(GATEWAY)).asJsonObject.get("url").asString
                 println("get gateway success: the address is [$url]")
                 webSocketClient = object : WebSocketClient(URI(url), mapOf("Authorization" to "Bot $token")) {
                     override fun onOpen(handshakedata: ServerHandshake) {
@@ -184,7 +223,7 @@ class Client (var token : String) {
                                 eventManager.callEventRaw(json)
                             }
                             1 -> {
-                                var code = json["d"].asJsonObject["code"].asInt
+                                val code = json["d"].asJsonObject["code"].asInt
                                 when (code) {
                                     0 -> {
                                         println("hello received: ok")
@@ -244,7 +283,7 @@ class Client (var token : String) {
         status = State.Connecting
         app.post(path) { ctx ->
             val text = InflaterInputStream(ctx.bodyAsBytes().inputStream()).bufferedReader().use { it.readText() }
-            var json = Gson().fromJson(text, JsonObject::class.java)
+            val json = Gson().fromJson(text, JsonObject::class.java)
             if (json["s"].asInt != 0) return@post
             json["d"].asJsonObject
             if (verifyToken.isNotEmpty()) {
@@ -287,7 +326,7 @@ class Client (var token : String) {
     }
 
     fun getUser(userId: String): User {
-        var jsonObject = sendRequest(requestBuilder(USER_VIEW, mapOf("user_id" to userId))).asJsonObject
+        val jsonObject = sendRequest(requestBuilder(USER_VIEW, mapOf("user_id" to userId))).asJsonObject
         if (!jsonObject.has("vip_avatar")) {
             jsonObject.addProperty("vip_avatar", "")
         }
@@ -300,7 +339,7 @@ class Client (var token : String) {
     }
 
     fun getGuildUser(userId: String, guildId: String): GuildUser {
-        var jsonObject = sendRequest(requestBuilder(USER_VIEW, mapOf("user_id" to userId, "guild_id" to guildId))).asJsonObject
+        val jsonObject = sendRequest(requestBuilder(USER_VIEW, mapOf("user_id" to userId, "guild_id" to guildId))).asJsonObject
         if (!jsonObject.has("vip_avatar")) {
             jsonObject.addProperty("vip_avatar", "")
         }
@@ -320,13 +359,13 @@ class Client (var token : String) {
         content: String,
         quote: String? = null
     ) {
-        sendRequest(requestBuilder(SEND_CHANNEL_MESSAGE, mapOf (
+        sendRequest(requestBuilder(SEND_CHANNEL_MESSAGE,
             "type" to type,
             "target_id" to target.id,
             "temp_target_id" to tempTarget,
             "nonce" to nonce,
             "content" to content,
             "quote" to quote,
-        )))
+        ))
     }
 }

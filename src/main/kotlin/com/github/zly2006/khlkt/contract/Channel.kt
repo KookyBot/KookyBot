@@ -1,3 +1,19 @@
+/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+Copyright (C) <year>  <name of author>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
+
 package com.github.zly2006.khlkt.contract
 
 import com.github.zly2006.khlkt.client.Client
@@ -9,6 +25,12 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
+
+enum class ChannelType {
+    UNKNOWN,
+    TEXT,
+    VOICE,
+}
 
 class Channel(
     @field:Transient
@@ -48,7 +70,6 @@ class Channel(
 
 
     override fun sendMessage(message: Message) {
-        if (client != message.client) return
         if (message is MarkdownMessage) {
             client.sendChannelMessage(
                 type = 9,
@@ -72,11 +93,11 @@ class Channel(
     }
 
     fun sendMarkdownMessage(message: String) {
-        sendMessage(MarkdownMessage(client, message, this))
+        sendMessage(MarkdownMessage(client, message))
     }
 
     fun sendCardMessage(content: CardMessage.MessageScope.() -> Unit) {
-        var msg = CardMessage(client = client,
+        val msg = CardMessage(client = client,
             primaryReceiver = this,
             contentBuilder = content)
         sendMessage(msg)

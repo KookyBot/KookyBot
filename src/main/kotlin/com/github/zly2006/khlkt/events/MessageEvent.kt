@@ -1,3 +1,19 @@
+/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+Copyright (C) <year>  <name of author>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
+
 package com.github.zly2006.khlkt.events
 
 import com.google.gson.annotations.SerializedName
@@ -18,22 +34,22 @@ open class MessageEvent(
     @field:SerializedName("msg_timestamp")
     var timestamp: String
 ): Event {
-    enum class EventType(i: Int) {
-        UNKNOWN(0),
-        PLAIN_TEXT(1),
-        IMAGE(2),
-        VIDEO(3),
-        FILE(4),
-        VOICE(8),
-        MARKDOWN(9),
-        CARD(10),
-        SYSTEM(255)
+    enum class EventType {
+        UNKNOWN,
+        PLAIN_TEXT,
+        IMAGE,
+        VIDEO,
+        FILE,
+        VOICE,
+        MARKDOWN,
+        CARD,
+        SYSTEM
     }
-    enum class ChannelType(t: String) {
-        GROUP("GROUP"),
-        BROADCAST("BROADCAST"),
-        PERSON("PERSON"),
-        UNKNOWN("?")
+    enum class ChannelType {
+        GROUP,
+        BROADCAST,
+        PERSON,
+        UNKNOWN
     }
     val eventType get() = when (_type) {
         1 -> EventType.PLAIN_TEXT

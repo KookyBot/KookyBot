@@ -1,3 +1,19 @@
+/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+Copyright (C) <year>  <name of author>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
+
 package com.github.zly2006.khlkt.contract
 
 import com.github.zly2006.khlkt.client.Client
@@ -62,10 +78,10 @@ class Guild(
                 openId = null
 
             channels = mutableListOf()
-            val list = g.get("channels").asJsonArray.map { it.asJsonObject.get("id").asString }.forEach {
+            g.get("channels").asJsonArray.map { it.asJsonObject.get("id").asString }.forEach {
                 val channel = Channel(client, it, this@Guild)
                 channel.update()
-                channels += channel
+                channels = channels + channel
             }
             // channels
             /*
@@ -91,9 +107,9 @@ class Guild(
 
             if (true) {
                 roleMap = mutableMapOf()
-                val list = g.get("roles").asJsonArray.forEach {
+                g.get("roles").asJsonArray.forEach {
                     val role = Gson().fromJson(it, GuildRole::class.java)
-                    roleMap += (role.id to role)
+                    roleMap = roleMap + (role.id to role)
                 }
             } else {
                 // always false
@@ -104,7 +120,7 @@ class Guild(
                         roleMap = mutableMapOf()
                         list.forEach {
                             val role = Gson().fromJson(it, GuildRole::class.java)
-                            roleMap += role.id to role
+                            roleMap = roleMap + (role.id to role)
                         }
                     }
                 } catch (e: Exception) {

@@ -14,17 +14,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package com.github.zly2006.khlkt.message
+package com.github.zly2006.khlkt.events;
 
-import com.github.zly2006.khlkt.client.Client
-import com.github.zly2006.khlkt.contract.Channel
-
-class MarkdownMessage(
-    client: Client,
-    var content: String
-) : Message(client) {
-    override fun content(): String = this.content
-    override fun send2Channel(channel: Channel) {
-        client.sendChannelMessage(target = channel, content = content())
-    }
+public class JavaEventHandler {
+    // TODO
 }

@@ -14,17 +14,28 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package com.github.zly2006.khlkt.message
+package com.github.zly2006.khlkt
 
 import com.github.zly2006.khlkt.client.Client
-import com.github.zly2006.khlkt.contract.Channel
+import com.github.zly2006.khlkt.client.State
+import com.github.zly2006.khlkt.contract.Self
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
-class MarkdownMessage(
-    client: Client,
-    var content: String
-) : Message(client) {
-    override fun content(): String = this.content
-    override fun send2Channel(channel: Channel) {
-        client.sendChannelMessage(target = channel, content = content())
+@OptIn(DelicateCoroutinesApi::class)
+fun connectWebsocket(client: Client): Self {
+    GlobalScope.launch {
+        client.start()
+    }
+    while (client.self == null || client.status != State.Connected) {
+        Thread.sleep(100)
+    }
+    return client.self!!
+}
+abstract class JavaBaseClass() {
+    open suspend fun CoroutineScope.onEnable() {
+
     }
 }

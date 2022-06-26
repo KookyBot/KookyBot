@@ -1,6 +1,5 @@
 package updatable
 
-import com.github.zly2006.khlkt.utils.DontUpdate
 import com.github.zly2006.khlkt.utils.Updatable
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
@@ -16,11 +15,14 @@ class UpdatableTest(
     @field:SerializedName("s")
     var ggg = ""
     var sss = listOf("")
-    @field:DontUpdate
+    //@field:DontUpdate
     var no = "no"
+    override fun update() {
+        TODO("Not yet implemented")
+    }
 }
 fun main() {
-    var t = UpdatableTest()
+    val t = UpdatableTest()
     t.updateByJson(
         Gson().toJsonTree(mapOf(
             "aaa" to 1,

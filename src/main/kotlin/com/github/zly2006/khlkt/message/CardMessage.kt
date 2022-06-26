@@ -1,16 +1,32 @@
+/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+Copyright (C) <year>  <name of author>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
+
 @file:Suppress("FunctionName")
 
 package com.github.zly2006.khlkt.message
 
 import com.github.zly2006.khlkt.client.Client
+import com.github.zly2006.khlkt.contract.Channel
 import com.github.zly2006.khlkt.contract.MessageReceiver
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 
 class CardMessage(client: Client, primaryReceiver: MessageReceiver, contentBuilder: MessageScope.() -> Unit) : Message(
-    client,
-    primaryReceiver) {
+    client) {
 
     enum class Size{
         XS, SM, MD, LG
@@ -29,19 +45,65 @@ class CardMessage(client: Client, primaryReceiver: MessageReceiver, contentBuild
         open fun add(component: CardComponent) {}
     }
     inner class MessageScope {
-        fun anElement(content: CardMessage.ModuleScope.() -> Unit): CardComponent {
-            val root = object : CardComponent() {
-                var com: CardComponent? = null
-                override fun add(component: CardComponent) {
-                    com = component
-                }
+        fun PlainTextElement(content: String): CardComponent {
+            return object : CardComponent() {
                 override fun toJson(): JsonElement {
-                    return JsonObject()
+                    val obj = JsonObject()
+                    obj.addProperty("type", "plain-text")
+                    obj.addProperty("content", content)
+                    return obj
                 }
             }
-            ModuleScope(root).content()
-            return root.com ?: throw Exception("no member")
         }
+        fun MarkdownElement(content: String): CardComponent {
+            return object : CardComponent() {
+                override fun toJson(): JsonElement {
+                    val obj = JsonObject()
+                    obj.addProperty("type", "kmarkdown")
+                    obj.addProperty("content", content)
+                    return obj
+                }
+            }
+        }
+        fun ImageElement(src: String,
+                         alt: String,
+                         size: Size,
+                         circle: Boolean): CardComponent {
+            return object : CardComponent() {
+                override fun toJson(): JsonElement {
+                    val obj = JsonObject()
+                    obj.addProperty("type", "image")
+                    obj.addProperty("circle", circle)
+                    obj.addProperty("alt", alt)
+                    obj.addProperty("src", src)
+                    obj.addProperty("size", size.name.lowercase())
+                    return obj
+                }
+            }
+        }
+        fun ButtonElement(
+            theme: Theme = Theme.Primary,
+            value: String = "",
+            click: ClickType = ClickType.None,
+            text: CardComponent,
+        ): CardComponent {
+            return object : CardComponent() {
+                override fun toJson(): JsonElement {
+                    val obj = JsonObject()
+                    obj.addProperty("type", "button")
+                    obj.addProperty("theme", theme.name.lowercase())
+                    obj.addProperty("value", value)
+                    obj.addProperty("click", when (click) {
+                        ClickType.None -> ""
+                        ClickType.Link -> "link"
+                        ClickType.ReturnValue -> "return-val"
+                    })
+                    obj.add("text", text.toJson())
+                    return obj
+                }
+            }
+        }
+
         fun Card (
             /**
              * SM | LG
@@ -239,64 +301,18 @@ class CardMessage(client: Client, primaryReceiver: MessageReceiver, contentBuild
         }
     }
     inner class ModuleScope(private val component: CardComponent) {
-        fun PlainTextElement(content: String) {
-            component.add(object : CardComponent() {
-                override fun toJson(): JsonElement {
-                    val obj = JsonObject()
-                    obj.addProperty("type", "plain-text")
-                    obj.addProperty("content", content)
-                    return obj
-                }
-            })
-        }
-        fun MarkdownElement(content: String) {
-            component.add(object : CardComponent() {
-                override fun toJson(): JsonElement {
-                    val obj = JsonObject()
-                    obj.addProperty("type", "kmarkdown")
-                    obj.addProperty("content", content)
-                    return obj
-                }
-            })
-        }
+        fun PlainTextElement(content: String) = component.add(MessageScope().PlainTextElement(content))
+        fun MarkdownElement(content: String) = component.add(MessageScope().MarkdownElement(content))
         fun ImageElement(src: String,
                          alt: String,
                          size: Size,
-                         circle: Boolean) {
-            component.add(object : CardComponent() {
-                override fun toJson(): JsonElement {
-                    val obj = JsonObject()
-                    obj.addProperty("type", "image")
-                    obj.addProperty("circle", circle)
-                    obj.addProperty("alt", alt)
-                    obj.addProperty("src", src)
-                    obj.addProperty("size", size.name.lowercase())
-                    return obj
-                }
-            })
-        }
+                         circle: Boolean) = component.add(MessageScope().ImageElement(src, alt, size, circle))
         fun ButtonElement(
             theme: Theme = Theme.Primary,
             value: String = "",
             click: ClickType = ClickType.None,
             text: CardComponent,
-        ) {
-            component.add(object : CardComponent() {
-                override fun toJson(): JsonElement {
-                    val obj = JsonObject()
-                    obj.addProperty("type", "button")
-                    obj.addProperty("theme", theme.name.lowercase())
-                    obj.addProperty("value", value)
-                    obj.addProperty("click", when (click) {
-                        ClickType.None -> ""
-                        ClickType.Link -> "link"
-                        ClickType.ReturnValue -> "return-val"
-                    })
-                    obj.add("text", text.toJson())
-                    return obj
-                }
-            })
-        }
+        ) = component.add(MessageScope().ButtonElement(theme, value, click, text))
     }
     private val root: CardComponent = object : CardComponent() {
         var arr: MutableList<CardComponent> = mutableListOf()
@@ -312,6 +328,14 @@ class CardMessage(client: Client, primaryReceiver: MessageReceiver, contentBuild
     }
     override fun content(): String {
         return root.toJson().toString()
+    }
+
+    override fun send2Channel(channel: Channel) {
+        client.sendChannelMessage(
+            type = 10,
+            target = channel,
+            content = content()
+        )
     }
 
     init {
