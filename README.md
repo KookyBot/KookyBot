@@ -1,5 +1,7 @@
 # KhlKt
 
+**简体中文** | [English](README_en.md)
+
 JVM平台上的开黑啦Bot SDK
 
 ## Quick Starting
