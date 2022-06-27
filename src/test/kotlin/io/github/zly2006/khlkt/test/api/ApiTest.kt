@@ -1,0 +1,26 @@
+package io.github.zly2006.khlkt.test.api
+
+import io.github.zly2006.khlkt.client.Client
+import io.github.zly2006.khlkt.events.ChannelMessageEvent
+import kotlinx.coroutines.awaitCancellation
+import org.slf4j.LoggerFactory
+import java.io.File
+
+suspend fun main() {
+    val token = File("data/token.txt").readText()
+    val client = Client(token)
+    val self = client.start()
+    val logger = LoggerFactory.getLogger("ApiTest")
+    client.eventManager.addListener<ChannelMessageEvent> {
+        if (content.contains("hello")) {
+            logger.info("hello")
+            channel.sendCardMessage {
+                Card {
+                    HeaderModule(PlainTextElement("Hello"))
+                    Divider()
+                }
+            }
+        }
+    }
+    awaitCancellation()
+}
