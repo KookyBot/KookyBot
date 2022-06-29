@@ -24,6 +24,7 @@ import io.github.zly2006.khlkt.client.Client
 import io.github.zly2006.khlkt.message.CardMessage
 import io.github.zly2006.khlkt.message.MarkdownMessage
 import io.github.zly2006.khlkt.message.Message
+import io.github.zly2006.khlkt.utils.DontUpdate
 import io.github.zly2006.khlkt.utils.Updatable
 
 enum class ChannelType {
@@ -34,7 +35,7 @@ enum class ChannelType {
 
 class Channel(
     @field:Transient
-    val client: Client,
+    override val client: Client,
     override val id: String,
     @field:Transient
     val guild: Guild,
@@ -50,12 +51,12 @@ class Channel(
     var level: Int = 0
     @field:SerializedName("slow_mode")
     var slowMode: Int = 0
-    @field:Transient//TODO
+    @field:DontUpdate
     var permissionOverwrites: List<RolePermissionOverwrite> = listOf()
-    @field:Transient//TODO
+    @field:DontUpdate
     var permissionUsers: List<UserPermissionOverwrite> = listOf()
 
-    @field:Transient
+    @field:DontUpdate
     var type: ChannelType = ChannelType.UNKNOWN
 
     data class RolePermissionOverwrite(
@@ -70,20 +71,17 @@ class Channel(
 
 
     override fun sendMessage(message: Message) {
-        if (message is MarkdownMessage) {
-            client.sendChannelMessage(
-                type = 9,
-                content = message.content(),
-                target = this
-            )
+        var type = 9
+        when (message) {
+            is CardMessage -> type = 10
+            is MarkdownMessage -> type = 9
         }
-        if (message is CardMessage) {
-            client.sendChannelMessage(
-                type = 10,
-                content = message.content(),
-                target = this
-            )
-        }
+        client.sendChannelMessage(
+            type = type,
+            content = message.content(),
+            target = this,
+            quote = message.quote
+        )
     }
     fun sendMessage(message: String) {
         client.sendChannelMessage(

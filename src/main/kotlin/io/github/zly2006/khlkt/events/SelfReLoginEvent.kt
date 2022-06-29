@@ -14,23 +14,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package io.github.zly2006.khlkt.message
+package io.github.zly2006.khlkt.events
 
-import io.github.zly2006.khlkt.client.Client
-import io.github.zly2006.khlkt.contract.Channel
-import io.github.zly2006.khlkt.contract.MessageReceiver
+import io.github.zly2006.khlkt.contract.Self
 
-abstract class Message(
-    protected val client: Client,
-    open var quote: String? = null
-) {
-    open fun content(): String {
-        return ""
-    }
-    abstract fun send2Channel(channel: Channel)
-    open fun send(messageReceiver: MessageReceiver) {
-        if (messageReceiver is Channel) {
-            send2Channel(messageReceiver)
-        }
-    }
-}
+// TODO
+class SelfReLoginEvent (
+    val self: Self
+): Event

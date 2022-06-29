@@ -37,8 +37,27 @@ class Self(
         }
         return@let list
     }
-    val chattingUsers: List<PrivateChatUser> = listOf()
+    val chattingUsers: List<PrivateChatUser> = let {
+        val list: MutableList<PrivateChatUser> = mutableListOf()
+        with(client) {
+            if (status != State.Connected) return@let list
+            val jsonObject = sendRequest(requestBuilder(Client.RequestType.USER_CHAT_LIST))
+            jsonObject.asJsonObject.get("items").asJsonArray.forEach { item ->
+
+            }
+        }
+        return@let list
+    }
     fun getUser(userId: String): User {
         return client.getUser(userId)
+    }
+
+    /**
+     * 这只会缓存100条消息
+     *
+     *
+     */
+    fun getCachedMessage(messageId: String) {
+        TODO()
     }
 }

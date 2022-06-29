@@ -2,7 +2,6 @@ package io.github.zly2006.khlkt.test.api
 
 import io.github.zly2006.khlkt.client.Client
 import io.github.zly2006.khlkt.events.ChannelMessageEvent
-import kotlinx.coroutines.awaitCancellation
 import org.slf4j.LoggerFactory
 import java.io.File
 
@@ -22,5 +21,10 @@ suspend fun main() {
             }
         }
     }
-    awaitCancellation()
+    while (true) {
+        var cmd = readln()
+        if (cmd == "status") {
+            println("${client.status} ${client.pingStatus} ${client.pingDelay}")
+        }
+    }
 }

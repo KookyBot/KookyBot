@@ -27,21 +27,26 @@ import io.github.zly2006.khlkt.events.EventManager
 import io.github.zly2006.khlkt.events.MessageEvent
 import io.github.zly2006.khlkt.events.SelfOnlineEvent
 import io.github.zly2006.khlkt.exception.KhlRemoteException
+import io.github.zly2006.khlkt.message.SelfMessage
 import io.github.zly2006.khlkt.utils.Updatable
 import io.javalin.Javalin
 import kotlinx.coroutines.*
 import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
 import org.slf4j.LoggerFactory
+import java.io.File
 import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
+import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.zip.InflaterInputStream
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 enum class State {
     Initialized,
@@ -59,9 +64,11 @@ enum class PingState {
 
 class Client (var token : String) {
     private val logger = LoggerFactory.getLogger(Client::class.java)
+    private val context: CoroutineContext = EmptyCoroutineContext
     private val debug = true
     private var lastSn = -1
     private var sessionId = ""
+    private var pingTimes = 0
     var pingDelay = 0L
     var status = State.Initialized
     var pingStatus = PingState.Success
@@ -106,6 +113,7 @@ class Client (var token : String) {
         USER_ME,
         SEND_CHANNEL_MESSAGE,
         EDIT_CHANNEL_MESSAGE,
+        DELETE_CHANNEL_MESSAGE,
 
         /**
          * requires: channel_id
@@ -113,6 +121,17 @@ class Client (var token : String) {
         VIEW_CHANNEL,
         LIST_CHANNEL,
         LIST_GUILD_ROLE,
+        USER_CHAT_LIST,
+        SEND_PRIVATE_MESSAGE,
+        EDIT_PRIVATE_MESSAGE,
+        DELETE_PRIVATE_MESSAGE,
+        CREATE_CHAT,
+
+        /**
+         * requires: chat_code
+         */
+        USER_CHAT_VIEW,
+        CREATE_ASSET,
     }
 
     private suspend fun ping() {
@@ -125,6 +144,7 @@ class Client (var token : String) {
             if (pingStatus == PingState.Pinging) {
                 pingStatus = PingState.Timeout
                 status = State.Disconnected
+                resume()
             }
         }
     }
@@ -172,14 +192,37 @@ class Client (var token : String) {
             GUILD_LIST -> builder.uri(apiOf("/guild/list")).GET()
             GUILD_VIEW -> builder.uri(apiOf("/guild/view?guild_id=${values!!["guild_id"]}")).GET()
             USER_VIEW -> builder.uri(apiOf("/user/view?user_id=${values!!["user_id"]}")).GET()
+            SEND_PRIVATE_MESSAGE -> builder.uri(apiOf("/direct-message/create"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
             SEND_CHANNEL_MESSAGE -> builder.uri(apiOf("/message/create"))
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
-            RequestType.LIST_CHANNEL -> builder.uri(apiOf("/channel/list?target_id=${values!!["channel_id"]}")).GET()
+            LIST_CHANNEL -> builder.uri(apiOf("/channel/list?target_id=${values!!["channel_id"]}")).GET()
             LIST_GUILD_ROLE -> builder.uri(apiOf("/guild-role/list?guild_id=${values!!["guild_id"]}")).GET()
             USER_ME -> builder.uri(apiOf("/user/me")).GET()
             VIEW_CHANNEL -> builder.uri(apiOf("/channel/view?target_id=${values!!["channel_id"]}")).GET()
-            else -> throw Exception("todo")
+            USER_CHAT_LIST -> builder.uri(apiOf("/user-chat-list")).GET()
+            USER_CHAT_VIEW -> builder.uri(apiOf("/user-chat-view?")).GET()
+            CREATE_ASSET -> builder.uri(apiOf("/asset/create"))
+                .header("content-type", "form-data")
+                .POST(postAll(values!!))
+            CREATE_CHAT -> builder.uri(apiOf("/user-chat/create"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
+            DELETE_PRIVATE_MESSAGE -> builder.uri(apiOf("/direct-message/delete"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
+            EDIT_PRIVATE_MESSAGE -> builder.uri(apiOf("/direct-message/update"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
+            DELETE_CHANNEL_MESSAGE -> builder.uri(apiOf("/message/delete"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
+            EDIT_CHANNEL_MESSAGE -> builder.uri(apiOf("/message/update"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
+            else -> TODO()
         }
         return builder.build()
     }
@@ -197,10 +240,87 @@ class Client (var token : String) {
         }
     }
 
-    private fun resume() {
-        if (webSocketClient == null) return
-        if (webSocketClient!!.isClosed) return
+    private suspend fun resume() {
+        logger.info("resuming")
+        if (status == State.Connected) return
+        sendRequest(requestBuilder(GATEWAY_RESUME))
         webSocketClient!!.send("{\"s\":4,\"sn\":$lastSn}")
+        delay(6000)
+        if (webSocketClient?.isOpen != true) {
+            logger.info("resume failed.")
+            pingTimes ++
+            if (pingTimes == 2) {
+                connect()
+            }
+            else{
+                resume()
+            }
+        }
+    }
+
+    private fun initWebsocket(url: String) {
+        webSocketClient = object : WebSocketClient(URI(url), mapOf("Authorization" to "Bot $token")) {
+            override fun onOpen(handshakedata: ServerHandshake) {
+                logger.debug("websocket opened: http status=${handshakedata.httpStatus}")
+            }
+
+            override fun onMessage(message: String) {
+                pingTimes = 0
+                var json = Gson().fromJson(message, JsonObject::class.java)
+                when (json.get("s").asInt) {
+                    0 -> {
+                        if (debug) {
+                            logger.info("[Event received] $message")
+                        }
+                        lastSn = json.get("sn").asInt
+                        json = json["d"].asJsonObject
+                        eventManager.callEventRaw(json)
+                    }
+                    1 -> {
+                        val code = json["d"].asJsonObject["code"].asInt
+                        when (code) {
+                            0 -> {
+                                logger.info("hello received: ok")
+                                status = State.Connected
+                                sessionId = json.get("d").asJsonObject.get("session_id").asString
+                                self = Self(this@Client)
+                            }
+                            else -> {
+                                throw Exception("khl login failed: code is $code\n  @see <https://developer.kaiheila.cn/doc/websocket>")
+                            }
+                        }
+                    }
+                    3 -> {
+                        pingDelay = Calendar.getInstance().timeInMillis - pingStart
+                        pingStatus = PingState.Success
+                        logger.debug("pong, delay = $pingDelay ms")
+                    }
+                    5 -> {
+                        pingJob.cancel()
+                        webSocketClient?.close()
+                        sessionId = ""
+                        lastSn = -1
+                        self = null
+                        connect()
+                    }
+                    6 -> {
+                        pingStatus = PingState.Success
+                        status = State.Connected
+                        sessionId = json.get("d").asJsonObject.get("session_id").asString
+                    }
+                }
+            }
+
+            override fun onClose(code: Int, reason: String, remote: Boolean) {
+                status = State.Disconnected
+                GlobalScope.launch {
+                    resume()
+                }
+            }
+            override fun onError(ex: java.lang.Exception) {
+                ex.printStackTrace()
+            }
+        }
     }
 
     private suspend fun connect(): Self {
@@ -208,62 +328,7 @@ class Client (var token : String) {
             try {
                 val url = sendRequest(requestBuilder(GATEWAY)).asJsonObject.get("url").asString
                 logger.info("get gateway success: the address is [$url]")
-                webSocketClient = object : WebSocketClient(URI(url), mapOf("Authorization" to "Bot $token")) {
-                    override fun onOpen(handshakedata: ServerHandshake) {
-                        logger.debug("websocket opened: http status=${handshakedata.httpStatus}")
-                    }
-
-                    override fun onMessage(message: String) {
-                        var json = Gson().fromJson(message, JsonObject::class.java)
-                        when (json.get("s").asInt) {
-                            0 -> {
-                                if (debug) {
-                                    logger.info("[Event received] $message")
-                                }
-                                lastSn = json.get("sn").asInt
-                                json = json["d"].asJsonObject
-                                eventManager.callEventRaw(json)
-                            }
-                            1 -> {
-                                val code = json["d"].asJsonObject["code"].asInt
-                                when (code) {
-                                    0 -> {
-                                        logger.info("hello received: ok")
-                                        status = State.Connected
-                                        sessionId = json.get("d").asJsonObject.get("session_id").asString
-                                        self = Self(this@Client)
-                                    }
-                                    else -> {
-                                        throw Exception("khl login failed: code is $code\n  @see <https://developer.kaiheila.cn/doc/websocket>")
-                                    }
-                                }
-                            }
-                            3 -> {
-                                pingDelay = Calendar.getInstance().timeInMillis - pingStart
-                                pingStatus = PingState.Success
-                                logger.debug("pong, delay = $pingDelay ms")
-                            }
-                            5 -> {
-                                pingJob.cancel()
-                                webSocketClient?.close()
-                                sessionId = ""
-                                lastSn = -1
-                                self = null
-                                connect()
-                            }
-                            6 -> {
-                                pingStatus = PingState.Success
-                                status = State.Connected
-                                sessionId = json.get("d").asJsonObject.get("session_id").asString
-                            }
-                        }
-                    }
-
-                    override fun onClose(code: Int, reason: String, remote: Boolean) {}
-                    override fun onError(ex: java.lang.Exception) {
-                        ex.printStackTrace()
-                    }
-                }
+                initWebsocket(url)
                 status = State.Connecting
                 if ((webSocketClient as WebSocketClient).connectBlocking(6000, TimeUnit.MILLISECONDS)) {
                     logger.info("websocket connected!")
@@ -277,6 +342,8 @@ class Client (var token : String) {
                 status = State.FatalError
                 e.printStackTrace()
             }
+            delay(5000)
+            logger.error("websocket connect failed, reconnecting in 5 seconds...")
         }
     }
 
@@ -337,6 +404,7 @@ class Client (var token : String) {
             10 -> UserState.BANNED
             else -> UserState.NORMAL
         }
+        user.client = this
         return user
     }
 
@@ -350,6 +418,7 @@ class Client (var token : String) {
             10 -> UserState.BANNED
             else -> UserState.NORMAL
         }
+        guildUser.client = this
         return guildUser
     }
 
@@ -360,8 +429,8 @@ class Client (var token : String) {
         nonce: String? = null,
         content: String,
         quote: String? = null
-    ) {
-        sendRequest(requestBuilder(SEND_CHANNEL_MESSAGE,
+    ): SelfMessage {
+        val ret = sendRequest(requestBuilder(SEND_CHANNEL_MESSAGE,
             "type" to type,
             "target_id" to target.id,
             "temp_target_id" to tempTarget,
@@ -369,5 +438,41 @@ class Client (var token : String) {
             "content" to content,
             "quote" to quote,
         ))
+        return SelfMessage(
+            client = this,
+            id = ret.get("msg_id").asString,
+            timestamp = ret.get("msg_timestamp").asInt,
+            target = target,
+            content = content
+        )
+    }
+    fun sendUserMessage(
+        type: Int = 9,
+        target: User,
+        nonce: String? = null,
+        content: String,
+        quote: String? = null
+    ): SelfMessage {
+        if (self!!.chattingUsers.find { it.id == target.id } == null) {
+            sendRequest(requestBuilder(CREATE_CHAT, "target_id" to target.id))
+        }
+        val ret = sendRequest(requestBuilder(SEND_PRIVATE_MESSAGE,
+            "type" to type,
+            "target_id" to target.id,
+            "nonce" to nonce,
+            "content" to content,
+            "quote" to quote,
+        ))
+        return SelfMessage(
+            client = this,
+            id = ret.get("msg_id").asString,
+            timestamp = ret.get("msg_timestamp").asInt,
+            target = target,
+            content = content
+        )
+    }
+    fun upload(file: File): String {
+        val data = file.readBytes()
+        return sendRequest(requestBuilder(CREATE_ASSET, "file" to data.toString(StandardCharsets.US_ASCII))).get("url").asString
     }
 }

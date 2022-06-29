@@ -33,7 +33,9 @@ interface Updatable {
                     ?.map { (it as SerializedName).value }
                     ?.firstOrNull() ?: it.name
                 if (!jsonElement.has(name)) return@forEach
-                if (it.annotations.filter { it.annotationClass == DontUpdate::class }.isNotEmpty()) return@forEach
+                if (it.javaField?.annotations?.filter { it.annotationClass == DontUpdate::class }?.isNotEmpty() == true) {
+                    return@forEach
+                }
 
                 when (it.returnType.javaType) {
                     Int::class.java -> it.setter.call(this, jsonElement.get(name).asInt)

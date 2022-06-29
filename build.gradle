@@ -141,3 +141,16 @@ signing {
 signMavenJavaPublication {
 
 }
+
+task fatJar(type: Jar) {
+    manifest {
+        //attributes 'Main-Class': 'MainKt'
+    }
+    setArchivesBaseName(project.name)
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    with jar
+}

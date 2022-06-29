@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 package io.github.zly2006.khlkt.contract
 
 import com.google.gson.annotations.SerializedName
+import io.github.zly2006.khlkt.client.Client
 import io.github.zly2006.khlkt.message.Message
 
 /**
@@ -32,6 +33,7 @@ enum class UserState {
 }
 
 open class User(
+    override var client: Client,
     override val id: String,
     val online: Boolean,
     val name: String,

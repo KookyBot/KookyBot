@@ -12,6 +12,9 @@ JVM平台上的开黑啦Bot SDK
 
 kotlin:
 ```kotlin
+import io.github.zly2006.khlkt.client.Client
+import io.github.zly2006.khlkt.events.ChannelMessageEvent
+
 fun main() {
     val client = Client("token")
     val self = client.start()
@@ -69,7 +72,9 @@ public class JavaApiTest extends JavaBaseClass {
 
 ## 文档
 
-文档就是根本没有，计划先用GitHub wiki，有意参与者清联系本人。
+[Docs](docs/index.md)
+
+还在做，不要急的啦
 
 ## 贡献
 

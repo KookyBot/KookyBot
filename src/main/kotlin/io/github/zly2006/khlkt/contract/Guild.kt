@@ -59,9 +59,9 @@ class Guild(
     var boostCount: Int = 0
     @field:Transient
     var channels: List<Channel> = listOf()
-    @field:Transient
-    var user: List<GuildUser> = listOf()
-    @field:Transient
+    @field:DontUpdate
+    var users: List<GuildUser> = listOf()
+    @field:DontUpdate
     var roleMap: Map<Int, GuildRole> = mapOf()
 
     val owner: User get() = client.getUser(masterId)
@@ -128,6 +128,9 @@ class Guild(
                     // 等待官方
                 }
             }
+            // users
+            users = mutableListOf()
+            
         }
     }
     init {

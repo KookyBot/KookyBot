@@ -16,9 +16,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.zly2006.khlkt.contract
 
+import com.google.gson.annotations.SerializedName
+import io.github.zly2006.khlkt.client.Client
+import io.github.zly2006.khlkt.utils.DontUpdate
 import io.github.zly2006.khlkt.utils.Updatable
 
 class PrivateChatUser(
+    @field:DontUpdate
+    val code: String,
+    @field:SerializedName("last_read_time")
+    var lastReadTime: Int,
+    @field:SerializedName("latest_msg_time")
+    var latestMessageTime: Int,
+    @field:SerializedName("unread_count")
+    var unreadCount: Int,
+    client: Client,
     name: String,
     identifyNumber: String,
     status: UserState,
@@ -31,7 +43,8 @@ class PrivateChatUser(
     oline: Boolean,
     joinTime: Int,
     activeTime: Int
-): User(id,
+): User(client,
+    id,
     oline,
     name,
     identifyNumber,
@@ -44,6 +57,9 @@ class PrivateChatUser(
     joinTime,
     activeTime), Updatable {
     override fun update() {
-        TODO("Not yet implemented")
+
+    }
+    fun delete() {
+        (client.self!!.chattingUsers as MutableList).remove(this)
     }
 }

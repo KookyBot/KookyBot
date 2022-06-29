@@ -19,6 +19,7 @@ package io.github.zly2006.khlkt.events
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.github.zly2006.khlkt.client.Client
+import io.github.zly2006.khlkt.message.SelfMessage
 import kotlin.reflect.KClass
 
 class EventHandler<T> (
@@ -59,8 +60,27 @@ class EventManager(
     fun callEventRaw(json: JsonObject) {
         callEvent(RawEvent(json))
         val event = Gson().fromJson(json, MessageEvent::class.java)
-        if (event.authorId == client.self?.id)
+        if (event.authorId == client.self?.id) {
+            if (event.channelType == MessageEvent.ChannelType.GROUP ||
+                    event.channelType == MessageEvent.ChannelType.PERSON) {
+                callEvent(SelfMessageEvent(SelfMessage(
+                    client = client,
+                    id = json.get("msg_id").asString,
+                    timestamp = json.get("msg_timestamp").asInt,
+                    target = when (event.channelType) {
+                        MessageEvent.ChannelType.GROUP -> client.self!!.guilds.map {
+                            it.channels.firstOrNull {
+                                it.id == json.get("target_id").asString
+                            }
+                        }.firstOrNull { it != null }!!
+                        MessageEvent.ChannelType.PERSON -> client.self!!.chattingUsers.firstOrNull { it.id == json.get("target_id").asString }!!
+                        else -> TODO()
+                    },
+                    content = json.get("content").asString
+                )))
+            }
             return
+        }
         if (event.eventType == MessageEvent.EventType.SYSTEM) {
             // TODO
         }

@@ -27,4 +27,7 @@ class MarkdownMessage(
     override fun send2Channel(channel: Channel) {
         client.sendChannelMessage(target = channel, content = content())
     }
+    fun append(component: MessageComponent) {
+        content += component.toMarkdown()
+    }
 }

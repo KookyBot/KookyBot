@@ -12,6 +12,9 @@ AN SDK to build bot on KHL for JVM platforms.
 
 kotlin:
 ```kotlin
+import io.github.zly2006.khlkt.client.Client
+import io.github.zly2006.khlkt.events.ChannelMessageEvent
+
 fun main() {
     val client = Client("token")
     val self = client.start()
