@@ -1,4 +1,4 @@
-# KhlKt
+# Kooky Bot
 
 [简体中文](README.md) | **English**
 
@@ -12,8 +12,8 @@ AN SDK to build bot on KHL for JVM platforms.
 
 kotlin:
 ```kotlin
-import io.github.zly2006.khlkt.client.Client
-import io.github.zly2006.khlkt.events.ChannelMessageEvent
+import io.github.zly2006.kookybot.client.Client
+import io.github.zly2006.kookybot.events.ChannelMessageEvent
 
 fun main() {
     val client = Client("token")
@@ -32,19 +32,20 @@ fun main() {
 }
 ```
 java:
+
 ```java
-import io.github.zly2006.khlkt.JavaBaseClass;
-import io.github.zly2006.khlkt.client.Client;
-import io.github.zly2006.khlkt.contract.Self;
-import io.github.zly2006.khlkt.events.ChannelMessageEvent;
-import io.github.zly2006.khlkt.events.JavaEventHandler;
+import io.github.zly2006.kookybot.JavaBaseClass;
+import io.github.zly2006.kookybot.client.Client;
+import io.github.zly2006.kookybot.contract.Self;
+import io.github.zly2006.kookybot.events.ChannelMessageEvent;
+import io.github.zly2006.kookybot.events.JavaEventHandler;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 
-import static io.github.zly2006.khlkt.JavaBaseClassKt.connectWebsocket;
+import static io.github.zly2006.kookybot.JavaBaseClassKt.connectWebsocket;
 
 public class JavaApiTest extends JavaBaseClass {
     public JavaApiTest() {
