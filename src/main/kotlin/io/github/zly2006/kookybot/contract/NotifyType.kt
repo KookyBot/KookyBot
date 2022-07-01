@@ -1,4 +1,4 @@
-/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+/* KookyBot - a SDK of <https://www.kookapp.cn> for JVM platform
 Copyright (C) 2022, zly2006 & contributors
 
 This program is free software: you can redistribute it and/or modify

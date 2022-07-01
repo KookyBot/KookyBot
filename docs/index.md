@@ -1,4 +1,5 @@
-# KhlKt Docs
+# KookyBot Docs
+
 `Kotlin`
 
 ### 登录你的Bot

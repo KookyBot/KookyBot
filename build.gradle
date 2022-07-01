@@ -96,9 +96,9 @@ publishing {
                 }
             }
             pom {
-                name = 'KhlKt'
-                description = 'An SDK of KHL for JVM platforms.'
-                url = 'https://github.com/zly2006/KhlKt'
+                name = 'KookyBot'
+                description = 'An SDK of KOOK for JVM platforms.'
+                url = 'https://github.com/zly2006/KookyBot'
                 properties = [
                         myProp: "value",
                         "prop.with.dots": "anotherValue"

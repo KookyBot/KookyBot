@@ -2,11 +2,11 @@
 
 [简体中文](README.md) | **English**
 
-AN SDK to build bot on KHL for JVM platforms.
+An SDK to build bot on KOOK (formally KaiHeiLa) for JVM platforms.
 
 ## Quick Starting
 
-1. Download the latest jar at [Releases](https://github.com/zly2006/KhlKt/releases) or clone this repo and build.
+1. Download the latest jar at [Releases](https://github.com/zly2006/KookyBot/releases) or clone this repo and build.
 2. Create a java or kotlin project, and import it as library.
 3. Write your code like this.
 
@@ -47,4 +47,4 @@ This project is open-source under AGPL v3 license.
 
 email：<mailto:return65530@qq.com>
 
-KHL：Steve47876#0001
+Kook：Steve47876#0001
