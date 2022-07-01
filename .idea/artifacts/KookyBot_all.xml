@@ -1,8 +1,8 @@
 <component name="ArtifactManager">
-  <artifact type="jar" name="KhlKt-all">
-    <output-path>$PROJECT_DIR$/out/artifacts/KhlKt_all</output-path>
-    <root id="archive" name="KhlKt.jar">
-      <element id="module-output" name="KhlKt.main" />
+  <artifact type="jar" name="KookyBot-all">
+    <output-path>$PROJECT_DIR$/out/artifacts/KookyBot_all</output-path>
+    <root id="archive" name="KookyBot.jar">
+      <element id="module-output" name="KookyBot.main" />
       <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.java-websocket/Java-WebSocket/1.5.3/9c26b6a6e732a1242db576a50dc3a12e446e2717/Java-WebSocket-1.5.3.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-databind/2.9.6/cfa4f316351a91bfd95cb0644c6a2c95f52db1fc/jackson-databind-2.9.6.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.eclipse.jetty.websocket/websocket-servlet/9.4.46.v20220331/235d1e5741f3aaace077003c0c20681305ee3303/websocket-servlet-9.4.46.v20220331.jar" path-in-jar="/" />

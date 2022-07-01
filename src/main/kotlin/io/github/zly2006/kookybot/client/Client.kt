@@ -1,4 +1,4 @@
-/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+/* KookyBot - a SDK of <https://www.kookapp.cn> for JVM platform
 Copyright (C) 2022, zly2006 & contributors
 
 This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,7 @@ import io.github.zly2006.kookybot.data
 import io.github.zly2006.kookybot.events.EventManager
 import io.github.zly2006.kookybot.events.MessageEvent
 import io.github.zly2006.kookybot.events.SelfOnlineEvent
-import io.github.zly2006.kookybot.exception.KhlRemoteException
+import io.github.zly2006.kookybot.exception.KookRemoteException
 import io.github.zly2006.kookybot.message.SelfMessage
 import io.github.zly2006.kookybot.utils.Updatable
 import io.javalin.Javalin
@@ -239,7 +239,7 @@ class Client (var token : String) {
                 return json.get("data").asJsonObject
             }
             else -> {
-                throw KhlRemoteException(json.get("code").asInt, json.get("message").asString, request)
+                throw KookRemoteException(json.get("code").asInt, json.get("message").asString, request)
             }
         }
     }
@@ -290,7 +290,7 @@ class Client (var token : String) {
                                 self = Self(this@Client)
                             }
                             else -> {
-                                throw Exception("khl login failed: code is $code\n  @see <https://developer.kaiheila.cn/doc/websocket>")
+                                throw Exception("KOOK login failed: code is $code\n  @see <https://developer.kookapp.cn/doc/websocket>")
                             }
                         }
                     }
@@ -369,7 +369,7 @@ class Client (var token : String) {
             ) {
                 val challenge = json["challenge"].asString
                 ctx.contentType("application/json").result("{\"challenge\":\"$challenge\"}")
-                logger.info("[Khl] Received WEBHOOK_CHALLENGE request, challenge: $challenge, Responded")
+                logger.info("[KOOK] Received WEBHOOK_CHALLENGE request, challenge: $challenge, Responded")
                 status = State.Connected
                 self = Self(client = this@Client)
             }

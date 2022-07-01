@@ -1,4 +1,4 @@
-/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+/* KookyBot - a SDK of <https://www.kookapp.cn> for JVM platform
 Copyright (C) 2022, zly2006 & contributors
 
 This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 package io.github.zly2006.kookybot
 
 object data {
-    val baseUrl = "https://www.kaiheila.cn"
-    val baseApiUrl = "https://www.kaiheila.cn/api/v3"
-
+    val baseUrl = "https://www.kookapp.cn"
+    val baseApiUrl = "https://www.kookapp.cn/api/v3"
 }

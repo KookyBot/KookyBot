@@ -1,4 +1,4 @@
-/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+/* KookyBot - a SDK of <https://www.kookapp.cn> for JVM platform
 Copyright (C) 2022, zly2006 & contributors
 
 This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@ package io.github.zly2006.kookybot.exception
 
 import java.net.http.HttpRequest
 
-class KhlRemoteException(
+class KookRemoteException(
     val code: Int,
     override val message: String?,
     val request: HttpRequest? = null

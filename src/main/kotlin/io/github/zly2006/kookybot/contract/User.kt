@@ -1,4 +1,4 @@
-/* KhlKt - a SDK of <https://kaiheila.cn> for JVM platform
+/* KookyBot - a SDK of <https://www.kookapp.cn> for JVM platform
 Copyright (C) 2022, zly2006 & contributors
 
 This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@ import io.github.zly2006.kookybot.message.Message
  * 此类型不会自动更新。
  * 每次使用都应该重新获取一遍，如
  *
- * @see com.github.zly2006.khlkt.contract.Self#getUser(String kotlin.userId)
+ * @see com.github.zly2006.kookybot.contract.Self#getUser(String kotlin.userId)
  */
 enum class UserState {
     NORMAL,
