@@ -21,8 +21,9 @@ import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.message.SelfMessage
 import kotlin.reflect.KClass
+import io.github.zly2006.kookybot.events.Listener as Listener1
 
-class EventHandler<T> (
+class SingleEventHandler<T> (
     var handler: (T) -> Unit
 ) {
     @Suppress("UNCHECKED_CAST")
@@ -35,8 +36,8 @@ class EventHandler<T> (
 class EventManager(
     private val client: Client
 ) {
-    val listeners: MutableMap<KClass<out Event>, MutableList<EventHandler<*>>> = mutableMapOf()
-    val javaListeners: MutableList<JavaEventHandler<*>> = mutableListOf()
+    val listeners: MutableMap<KClass<out Event>, MutableList<SingleEventHandler<*>>> = mutableMapOf()
+    val classListeners: MutableList<Listener1> = mutableListOf()
 
     inline fun <reified T : Event> callEvent(event: T) {
         listeners[T::class]?.forEach { it ->
@@ -47,12 +48,13 @@ class EventManager(
                 e.printStackTrace()
             }
         }
-        javaListeners.forEach {
-            try {
-                it.call(event)
-            }
-            catch (e: Exception) {
-                e.printStackTrace()
+        classListeners.forEach {
+            it.javaClass.methods.forEach { method ->
+                if (method.annotations.contains(EventHandler()) && method.canAccess(it)) {
+                    if (method.parameterTypes[0] == T::class.java) {
+                        method.invoke(it, event)
+                    }
+                }
             }
         }
     }
@@ -107,7 +109,7 @@ class EventManager(
     }
 
     inline fun<reified T> addListener(noinline handler: T.() -> Unit) where T:Event{
-        val eventHandler = EventHandler(handler)
+        val eventHandler = SingleEventHandler(handler)
         if (listeners.contains(T::class)) {
             listeners[T::class]!!.add(eventHandler)
         }
@@ -116,7 +118,7 @@ class EventManager(
         }
     }
 
-    fun <T> addJavaListener(javaEventHandler: JavaEventHandler<T>) {
-        javaListeners.add(javaEventHandler)
+    fun addClassListener(listener: Listener1) {
+        classListeners.add(listener)
     }
 }

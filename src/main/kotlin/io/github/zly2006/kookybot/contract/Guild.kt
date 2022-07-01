@@ -117,7 +117,7 @@ class Guild(
                 }
             }
             // users
-            users = sendRequest(requestBuilder(Client.RequestType.GUILD_USER_LIST))
+            users = sendRequest(requestBuilder(Client.RequestType.GUILD_USER_LIST, "guild_id" to id))
                 .get("items").asJsonArray.map { it.asJsonObject.get("id").asString }.map {
                     val user = GuildUser(client, it, this@Guild)
                     user.update()

@@ -176,7 +176,7 @@ class Client (var token : String) {
                 ret.addProperty(it.key, it.value as Boolean)
             }
         }
-        logger.debug(ret.toString())
+        logger.trace("Client.postAll: returning $ret")
         return BodyPublishers.ofString(ret.toString())
     }
 
@@ -226,7 +226,7 @@ class Client (var token : String) {
             EDIT_CHANNEL_MESSAGE -> builder.uri(apiOf("/message/update"))
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
-            GUILD_USER_LIST -> builder.uri(apiOf("/guild/user-list")).GET()
+            GUILD_USER_LIST -> builder.uri(apiOf("/guild/user-list?guild_id=${values!!["guild_id"]}")).GET()
         }
         return builder.build()
     }
@@ -316,9 +316,10 @@ class Client (var token : String) {
             }
 
             override fun onClose(code: Int, reason: String, remote: Boolean) {
+                logger.info("websocket closed")
                 status = State.Disconnected
                 GlobalScope.launch {
-                    resume()
+                    this@Client.connect()
                 }
             }
             override fun onError(ex: java.lang.Exception) {

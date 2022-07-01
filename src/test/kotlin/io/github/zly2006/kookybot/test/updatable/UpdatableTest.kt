@@ -49,13 +49,4 @@ fun main() {
     JUnit5Asserter.assertEquals("", t.ggg, "test success")
     JUnit5Asserter.assertEquals("", t.sss.size, 1)
     JUnit5Asserter.assertEquals("", t.sss.size, 1)
-    println(t.aaa)
-    println(t.bbb)
-    println(t.ccc)
-    println(t.ddd)
-    println(t.eee)
-    println(t.fff)
-    println(t.ggg)
-    println(t.sss.size)
-    println(t.no)
 }

@@ -19,23 +19,20 @@ package io.github.zly2006.kookybot
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.client.State
 import io.github.zly2006.kookybot.contract.Self
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
-@OptIn(DelicateCoroutinesApi::class)
-fun connectWebsocket(client: Client): Self {
-    GlobalScope.launch {
-        client.start()
-    }
-    while (client.self == null || client.status != State.Connected) {
-        Thread.sleep(100)
-    }
-    return client.self!!
-}
-abstract class JavaBaseClass() {
-    open suspend fun CoroutineScope.onEnable() {
-
+open class JavaBaseClass() {
+    companion object utils {
+        @JvmStatic
+        fun connectWebsocket(client: Client): Self {
+            GlobalScope.launch {
+                client.start()
+            }
+            while (client.self == null || client.status != State.Connected) {
+                Thread.sleep(100)
+            }
+            return client.self!!
+        }
     }
 }
