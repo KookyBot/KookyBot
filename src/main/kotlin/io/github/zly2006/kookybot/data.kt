@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 package io.github.zly2006.kookybot
 
 object data {
-    val baseUrl = "https://www.kaiheila.cn"
-    val baseApiUrl = "https://www.kaiheila.cn/api/v3"
-
+    val baseUrl = "https://www.kookapp.cn"
+    val baseApiUrl = "https://www.kookapp.cn/api/v3"
 }

@@ -18,7 +18,7 @@ package io.github.zly2006.kookybot.exception
 
 import java.net.http.HttpRequest
 
-class KhlRemoteException(
+class KookRemoteException(
     val code: Int,
     override val message: String?,
     val request: HttpRequest? = null
