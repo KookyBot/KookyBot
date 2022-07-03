@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 
 suspend fun main() {
+    
     val token = File("data/token.txt").readText()
     val client = Client(token)
     val self = client.start()

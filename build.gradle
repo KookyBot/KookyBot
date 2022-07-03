@@ -1,8 +1,5 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.7.0'
-    id 'application'
-    id 'maven-publish'
-    id 'signing'
 }
 
 group property('group')
@@ -11,13 +8,6 @@ version property('version')
 repositories {
     mavenCentral()
 }
-
-/**
- * these parts are used to publish the repo to maven.
- * if you don't use it, please remove them.
- */
-String ossrhUsername = rootProject.property("sonatypeUsername") as String
-String ossrhPassword = rootProject.property("sonatypePassword") as String
 
 dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
@@ -44,113 +34,11 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = '1.8'
 }
 
-application {
-    mainClassName = 'MainKt'
-}
-
-task javadocJar(type: Jar) {
-    classifier = 'javadoc'
-    from javadoc
-}
-
-task sourcesJar(type: Jar) {
-    getArchiveClassifier().set("sources")
-    //classifier = 'sources'
-    from sourceSets.main.allSource
-}
-
-application {
-    mainClass.set("MainKt")
-}
-
-artifacts {
-    archives javadocJar, sourcesJar
-}
-
-signing {
-    sign configurations.archives
-}
-
-
-/**
- * this part is used to publish the repo to maven.
- * if you don't use it, please remove this block.
- */
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            artifactId = 'my-library'
-            from components.java
-            versionMapping {
-                usage('java-api') {
-                    fromResolutionOf('runtimeClasspath')
-                }
-                usage('java-runtime') {
-                    fromResolutionResult()
-                }
-            }
-            pom {
-                name = 'KookyBot'
-                description = 'An SDK of KOOK for JVM platforms.'
-                url = 'https://github.com/zly2006/KookyBot'
-                properties = [
-                        myProp: "value",
-                        "prop.with.dots": "anotherValue"
-                ]
-                licenses {
-                    license {
-                        name = 'GNU Affero General Public License v3'
-                        url = 'https://www.gnu.org/licenses'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'zly2006'
-                        name = 'Liyan Zhao '
-                        email = 'john.doe@example.com'
-                    }
-                }
-                scm {
-                    connection = 'scm:git:git://example.com/my-library.git'
-                    developerConnection = 'scm:git:ssh://example.com/my-library.git'
-                    url = 'http://example.com/my-library/'
-                }
-            }
-        }
-    }
-    repositories {
-        maven {
-            // change URLs to point to your repos, e.g. http://my.org/repo
-            def releasesRepoUrl = layout.buildDirectory.dir('repos/releases')
-            def snapshotsRepoUrl = layout.buildDirectory.dir('repos/snapshots')
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-        }
-    }
-}
-
-signing {
-    sign publishing.publications.mavenJava
-}
-
-signMavenJavaPublication {
-
-}
-
-task fatJar(type: Jar) {
-    manifest {
-        //attributes 'Main-Class': 'MainKt'
-    }
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     setArchivesBaseName(project.name)
-    from {
-        configurations.runtimeClasspath.collect {
-            it.isDirectory() ? it : zipTree(it)
-        }
+    manifest {
+        attributes 'Main-Class': 'io.github.zly2006.kookybot.LanucherKt'
     }
-    with jar
+    from configurations.runtimeClasspath.collect {it.isDirectory() ? it : zipTree(it) }
 }

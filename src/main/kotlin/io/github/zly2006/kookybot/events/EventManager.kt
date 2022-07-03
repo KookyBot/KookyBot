@@ -20,6 +20,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.message.SelfMessage
+import io.github.zly2006.kookybot.utils.Emoji
 import kotlin.reflect.KClass
 import io.github.zly2006.kookybot.events.Listener as Listener1
 
@@ -84,7 +85,32 @@ class EventManager(
             return
         }
         if (event.eventType == MessageEvent.EventType.SYSTEM) {
-            // TODO
+            when (json.get("extra").asJsonObject.get("type").asString) {
+                "added_reaction" -> {
+                    val channelPostReactionEvent = Gson().fromJson(json, ChannelPostReactionEvent::class.java)
+                    channelPostReactionEvent.channel = client.self!!.getChannel(json.get("extra").asJsonObject.get("channel_id").asString)!!
+                    channelPostReactionEvent.emoji = Emoji(
+                        json.get("extra").asJsonObject.get("emoji").asJsonObject.get("id").asString,
+                        json.get("extra").asJsonObject.get("emoji").asJsonObject.get("name").asString
+                    )
+                    channelPostReactionEvent.guild = channelPostReactionEvent.channel.guild
+                    channelPostReactionEvent.sender = client.self!!.getGuildUser(json.get("extra").asJsonObject.get("user_id").asString, channelPostReactionEvent.guild.id)!!
+                    channelPostReactionEvent.targetId = json.get("extra").asJsonObject.get("msg_id").asString
+                    callEvent(channelPostReactionEvent)
+                }
+                "deleted_reaction" -> {
+                    val channelCancelReactionEvent = Gson().fromJson(json, ChannelCancelReactionEvent::class.java)
+                    channelCancelReactionEvent.channel = client.self!!.getChannel(json.get("extra").asJsonObject.get("channel_id").asString)!!
+                    channelCancelReactionEvent.emoji = Emoji(
+                        json.get("extra").asJsonObject.get("emoji").asJsonObject.get("id").asString,
+                        json.get("extra").asJsonObject.get("emoji").asJsonObject.get("name").asString
+                    )
+                    channelCancelReactionEvent.guild = channelCancelReactionEvent.channel.guild
+                    channelCancelReactionEvent.sender = client.self!!.getGuildUser(json.get("extra").asJsonObject.get("user_id").asString, channelCancelReactionEvent.guild.id)!!
+                    channelCancelReactionEvent.targetId = json.get("extra").asJsonObject.get("msg_id").asString
+                    callEvent(channelCancelReactionEvent)
+                }
+            }
         }
         else if (event.channelType == MessageEvent.ChannelType.GROUP) {
             val channelMessageEvent = Gson().fromJson(json, ChannelMessageEvent::class.java)

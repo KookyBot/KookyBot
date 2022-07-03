@@ -10,6 +10,7 @@ class UpdatableTest(
     var ccc: Int = 0,
     val ddd: Int = 0
 ): Updatable {
+    @Transient
     var aaa: Int = 0
     val bbb: Int = 0
     var eee = false

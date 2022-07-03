@@ -18,7 +18,7 @@ package io.github.zly2006.kookybot.events
 
 import com.google.gson.annotations.SerializedName
 
-open class MessageEvent(
+abstract class MessageEvent(
     @field:SerializedName("channel_type")
     private var _channelType: String,
     @field:SerializedName("type")

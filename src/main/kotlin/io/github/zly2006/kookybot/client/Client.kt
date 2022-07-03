@@ -78,7 +78,7 @@ class Client (var token : String) {
     var self: Self? = null
     private var webSocketClient: WebSocketClient? = null
     private val httpClient = HttpClient.newHttpClient()
-    val eventManager: EventManager = EventManager(this)
+    val eventManager = EventManager(this)
     private val updatableList: MutableList<Updatable> = mutableListOf()
     private var updateJob: Job? = null
 
@@ -160,20 +160,12 @@ class Client (var token : String) {
     private fun postAll(values: Map<String, Any?>): HttpRequest.BodyPublisher? {
         val ret = JsonObject()
         values.entries.forEach {
-            if (it.value == null) {
-                return@forEach
-            }
-            else if (it.value is Number) {
-                ret.addProperty(it.key, it.value as Number)
-            }
-            else if (it.value is Char) {
-                ret.addProperty(it.key, it.value as Char)
-            }
-            else if (it.value is String) {
-                ret.addProperty(it.key, it.value as String)
-            }
-            else if (it.value is Boolean) {
-                ret.addProperty(it.key, it.value as Boolean)
+            when (it.value) {
+                null -> return@forEach
+                is Number -> ret.addProperty(it.key, it.value as Number)
+                is Char -> ret.addProperty(it.key, it.value as Char)
+                is String -> ret.addProperty(it.key, it.value as String)
+                is Boolean -> ret.addProperty(it.key, it.value as Boolean)
             }
         }
         logger.trace("Client.postAll: returning $ret")
@@ -262,8 +254,8 @@ class Client (var token : String) {
         }
     }
 
-    private fun initWebsocket(url: String) {
-        webSocketClient = object : WebSocketClient(URI(url), mapOf("Authorization" to "Bot $token")) {
+    private fun initWebsocket(url: String): WebSocketClient {
+        return object : WebSocketClient(URI(url), mapOf("Authorization" to "Bot $token")) {
             override fun onOpen(handshakedata: ServerHandshake) {
                 logger.debug("websocket opened: http status=${handshakedata.httpStatus}")
             }
@@ -281,8 +273,7 @@ class Client (var token : String) {
                         eventManager.callEventRaw(json)
                     }
                     1 -> {
-                        val code = json["d"].asJsonObject["code"].asInt
-                        when (code) {
+                        when (val code = json["d"].asJsonObject["code"].asInt) {
                             0 -> {
                                 logger.info("hello received: ok")
                                 status = State.Connected
@@ -301,11 +292,13 @@ class Client (var token : String) {
                     }
                     5 -> {
                         pingJob.cancel()
-                        webSocketClient?.close()
+                        this.closeBlocking()
                         sessionId = ""
                         lastSn = -1
                         self = null
-                        connect()
+                        GlobalScope.launch {
+                            this@Client.connect()
+                        }
                     }
                     6 -> {
                         pingStatus = PingState.Success
@@ -317,9 +310,9 @@ class Client (var token : String) {
 
             override fun onClose(code: Int, reason: String, remote: Boolean) {
                 logger.info("websocket closed")
-                status = State.Disconnected
+                //status = State.Disconnected
                 GlobalScope.launch {
-                    this@Client.connect()
+              //      this@Client.connect()
                 }
             }
             override fun onError(ex: java.lang.Exception) {
@@ -333,7 +326,7 @@ class Client (var token : String) {
             try {
                 val url = sendRequest(requestBuilder(GATEWAY)).asJsonObject.get("url").asString
                 logger.info("get gateway success: the address is [$url]")
-                initWebsocket(url)
+                webSocketClient = initWebsocket(url)
                 status = State.Connecting
                 if ((webSocketClient as WebSocketClient).connectBlocking(6000, TimeUnit.MILLISECONDS)) {
                     logger.info("websocket connected!")
@@ -392,7 +385,7 @@ class Client (var token : String) {
             getWhSelf()
         }
         updateJob = GlobalScope.launch {
-            updatableList.forEach { it.update() }
+         //   updatableList.forEach { it.update() }
             delay(30 * 1000)
         }
         eventManager.callEvent(SelfOnlineEvent(self))
@@ -405,7 +398,7 @@ class Client (var token : String) {
             jsonObject.addProperty("vip_avatar", "")
         }
         val user = Gson().fromJson(jsonObject, User::class.java)
-        user.status = when (jsonObject.get("atus").asInt) {
+        user.status = when (jsonObject.get("status").asInt) {
             10 -> UserState.BANNED
             else -> UserState.NORMAL
         }

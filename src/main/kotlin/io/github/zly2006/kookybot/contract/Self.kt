@@ -60,7 +60,7 @@ class Self(
     }
 
     fun getChannel(id: String): Channel? {
-        return guilds.map { it.channels.firstOrNull { it.id == id } }.firstOrNull { it != null }
+        return guilds.map { guild -> guild.channels.firstOrNull { channel -> channel.id == id } }.firstOrNull { it != null }
     }
 
     fun getGuildUser(id: String, guild: String): GuildUser? {

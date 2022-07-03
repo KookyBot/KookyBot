@@ -13,20 +13,19 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
-
 package io.github.zly2006.kookybot.events
 
 import io.github.zly2006.kookybot.contract.Channel
 import io.github.zly2006.kookybot.contract.Guild
 import io.github.zly2006.kookybot.contract.GuildUser
+import io.github.zly2006.kookybot.utils.Emoji
 
-open class ChannelMessageEvent(
+class ChannelPostReactionEvent (
     @field:Transient
-    var channel: Channel,
-    @field:Transient
-    var sender: GuildUser,
-    @field:Transient
-    var guild: Guild,
+    var emoji: Emoji,
+    channel: Channel,
+    sender: GuildUser,
+    guild: Guild,
     _channelType: String,
     _type: Int,
     targetId: String,
@@ -34,4 +33,4 @@ open class ChannelMessageEvent(
     content: String,
     sid: String,
     timestamp: String
-): MessageEvent(_channelType, _type, targetId, authorId, content, sid, timestamp)
+): ChannelMessageEvent(channel, sender, guild, _channelType, _type, targetId, authorId, content, sid, timestamp)
