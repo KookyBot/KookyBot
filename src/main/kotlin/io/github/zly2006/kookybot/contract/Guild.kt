@@ -45,9 +45,9 @@ class Guild(
     @field:SerializedName("region")
     var region: String = ""
     @field:Transient
-    var defaultChannel: Channel? = null
+    var defaultChannel: TextChannel? = null
     @field:Transient
-    var welcomeChannel: Channel? = null
+    var welcomeChannel: TextChannel? = null
     @field:SerializedName("open_id")
     /**
      * 公开邀请链接id，为null说明不公开
@@ -59,6 +59,8 @@ class Guild(
     var boostCount: Int = 0
     @field:Transient
     var channels: List<Channel> = listOf()
+    @field:Transient
+    var categories: List<Category> = listOf()
     @field:DontUpdate
     var users: List<GuildUser> = listOf()
     @field:DontUpdate
@@ -77,17 +79,18 @@ class Guild(
             if (!g.get("enable_open").asBoolean)
                 openId = null
 
-            channels = g.get("channels").asJsonArray.map { it.asJsonObject.get("id").asString }.map {
-                val channel = Channel(client, it, this@Guild)
+            channels = g.get("channels").asJsonArray.map { it.asJsonObject }.filter { !it.get("is_category").asBoolean }.map {
+                val id = it.get("id").asString
+                val channel = when (it.get("type").asInt) {
+                    1 -> TextChannel(client, id, this@Guild)
+                    2 -> VoiceChannel(client, id, this@Guild)
+                    else -> TODO()
+                }
                 channel.update()
                 return@map channel
             }
-            defaultChannel =
-                channels.filter { it.id == g.asJsonObject.get("default_channel_id").asString }
-                    .firstOrNull()
-            welcomeChannel =
-                channels.filter { it.id == g.asJsonObject.get("welcome_channel_id").asString }
-                    .firstOrNull()
+            defaultChannel = channels.firstOrNull { it.id == g.asJsonObject.get("default_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel
+            welcomeChannel = channels.firstOrNull { it.id == g.asJsonObject.get("welcome_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel
 
 
             // bot permission

@@ -1,8 +1,9 @@
-package io.github.zly2006.kookybot.events
+package io.github.zly2006.kookybot.events.direct
 
 import io.github.zly2006.kookybot.contract.PrivateChatUser
+import io.github.zly2006.kookybot.events.MessageEvent
 
-class PrivateMessageEvent (
+class DirectMessageEvent (
     @field:Transient
     var sender: PrivateChatUser,
     _channelType: String,

@@ -1,5 +1,6 @@
-package io.github.zly2006.kookybot.events
+package io.github.zly2006.kookybot.events.self
 
+import io.github.zly2006.kookybot.events.Event
 import io.github.zly2006.kookybot.message.SelfMessage
 
 /**

@@ -21,9 +21,6 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.message.CardMessage
-import io.github.zly2006.kookybot.message.MarkdownMessage
-import io.github.zly2006.kookybot.message.Message
 import io.github.zly2006.kookybot.utils.DontUpdate
 import io.github.zly2006.kookybot.utils.Updatable
 
@@ -33,21 +30,19 @@ enum class ChannelType {
     VOICE,
 }
 
-class Channel(
+abstract class Channel(
     @field:Transient
-    override val client: Client,
-    override val id: String,
+    val client: Client,
+    val id: String,
     @field:Transient
     val guild: Guild,
-) : MessageReceiver(), Updatable {
+): Updatable {
     var name: String = ""
     @field:Transient
-    var parent: Channel? = null
+    var parent: Category? = null
     var topic: String = ""
     @field:SerializedName("permission_sync")
     var permissionSync: Int = 0
-    @field:SerializedName("is_category")
-    var category: Boolean = false
     var level: Int = 0
     @field:SerializedName("slow_mode")
     var slowMode: Int = 0
@@ -69,37 +64,6 @@ class Channel(
         var value: Boolean
     )
 
-
-    override fun sendMessage(message: Message) {
-        var type = 9
-        when (message) {
-            is CardMessage -> type = 10
-            is MarkdownMessage -> type = 9
-        }
-        client.sendChannelMessage(
-            type = type,
-            content = message.content(),
-            target = this,
-            quote = message.quote
-        )
-    }
-    fun sendMessage(message: String) {
-        client.sendChannelMessage(
-            content = message,
-            target = this
-        )
-    }
-
-    fun sendMarkdownMessage(message: String) {
-        sendMessage(MarkdownMessage(client, message))
-    }
-
-    fun sendCardMessage(content: CardMessage.MessageScope.() -> Unit) {
-        val msg = CardMessage(client = client,
-            contentBuilder = content)
-        sendMessage(msg)
-    }
-
     override fun updateByJson(jsonElement: JsonElement) {
         super.updateByJson(jsonElement)
         type = when(jsonElement.asJsonObject.get("type").asInt) {
@@ -115,8 +79,5 @@ class Channel(
                 mapOf("channel_id" to id))), JsonObject::class.java)
             updateByJson(channel)
         }
-    }
-
-    init {
     }
 }

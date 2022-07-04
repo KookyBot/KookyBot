@@ -21,10 +21,10 @@ import io.github.zly2006.kookybot.message.CardMessage
 import io.github.zly2006.kookybot.message.MarkdownMessage
 import io.github.zly2006.kookybot.message.Message
 
-abstract class MessageReceiver {
-    open fun sendMessage(message: Message) {
+interface MessageReceiver {
+    fun sendMessage(message: Message) {
         when (this) {
-            is Channel -> {
+            is TextChannel -> {
                 when (message) {
                     is CardMessage -> {
                         client.sendChannelMessage(

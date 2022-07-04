@@ -14,21 +14,25 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package io.github.zly2006.kookybot.message
+package io.github.zly2006.kookybot.events.channel
 
-import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.contract.Channel
+import io.github.zly2006.kookybot.contract.Guild
+import io.github.zly2006.kookybot.contract.GuildUser
 import io.github.zly2006.kookybot.contract.TextChannel
+import io.github.zly2006.kookybot.events.MessageEvent
 
-class MarkdownMessage(
-    client: Client,
-    var content: String
-) : Message(client) {
-    override fun content(): String = this.content
-    override fun send2Channel(channel: TextChannel) {
-        client.sendChannelMessage(target = channel, content = content())
-    }
-    fun append(component: MessageComponent) {
-        content += component.toMarkdown()
-    }
-}
+open class ChannelMessageEvent(
+    @field:Transient
+    var channel: TextChannel,
+    @field:Transient
+    var sender: GuildUser,
+    @field:Transient
+    var guild: Guild,
+    _channelType: String,
+    _type: Int,
+    targetId: String,
+    authorId: String,
+    content: String,
+    sid: String,
+    timestamp: String
+): MessageEvent(_channelType, _type, targetId, authorId, content, sid, timestamp)

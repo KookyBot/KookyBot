@@ -14,11 +14,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package io.github.zly2006.kookybot.events
+package io.github.zly2006.kookybot.events.self
 
 import io.github.zly2006.kookybot.contract.Self
+import io.github.zly2006.kookybot.events.Event
 
-// TODO
-class SelfReLoginEvent (
+class SelfOnlineEvent (
     val self: Self
 ): Event

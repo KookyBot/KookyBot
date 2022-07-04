@@ -3,7 +3,7 @@ package io.github.zly2006.kookybot.test.api;
 import io.github.zly2006.kookybot.JavaBaseClass;
 import io.github.zly2006.kookybot.client.Client;
 import io.github.zly2006.kookybot.contract.Self;
-import io.github.zly2006.kookybot.events.ChannelMessageEvent;
+import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent;
 import io.github.zly2006.kookybot.events.EventHandler;
 import io.github.zly2006.kookybot.events.Listener;
 import io.github.zly2006.kookybot.message.CardMessage;

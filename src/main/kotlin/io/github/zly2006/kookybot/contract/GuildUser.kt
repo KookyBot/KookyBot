@@ -67,4 +67,5 @@ class GuildUser(
             sendRequest(requestBuilder(Client.RequestType.USER_VIEW, mapOf("user_id" to id, "guild_id" to guild.id))).asJsonObject
         })
     }
+
 }

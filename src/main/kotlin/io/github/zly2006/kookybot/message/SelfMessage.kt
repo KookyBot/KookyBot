@@ -17,8 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 package io.github.zly2006.kookybot.message
 
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.contract.Channel
 import io.github.zly2006.kookybot.contract.MessageReceiver
+import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.contract.User
 
 /**
@@ -35,7 +35,7 @@ class SelfMessage(
 ) {
     fun edit(content: String) {
         when (target) {
-            is Channel -> {
+            is TextChannel -> {
                 client.sendRequest(client.requestBuilder(Client.RequestType.EDIT_CHANNEL_MESSAGE,
                 "content" to content,
                 "msg_id" to id))
@@ -49,7 +49,7 @@ class SelfMessage(
     }
     fun delete() {
         when (target) {
-            is Channel -> {
+            is TextChannel -> {
                 client.sendRequest(client.requestBuilder(Client.RequestType.EDIT_CHANNEL_MESSAGE,
                     "msg_id" to id))
             }

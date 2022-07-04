@@ -19,10 +19,12 @@ package io.github.zly2006.kookybot
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.client.State
 import io.github.zly2006.kookybot.contract.Self
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 open class JavaBaseClass() {
+    @OptIn(DelicateCoroutinesApi::class)
     companion object utils {
         @JvmStatic
         fun connectWebsocket(client: Client): Self {

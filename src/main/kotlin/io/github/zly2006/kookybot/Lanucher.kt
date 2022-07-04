@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.zly2006.kookybot
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.events.ChannelMessageEvent
+import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.withContext

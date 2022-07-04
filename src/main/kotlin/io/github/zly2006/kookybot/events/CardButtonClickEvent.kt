@@ -2,12 +2,13 @@ package io.github.zly2006.kookybot.events
 
 import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.contract.Channel
+import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.contract.User
 
 class CardButtonClickEvent (
     var value: String,
     @Transient
-    var channel: Channel?,
+    var channel: TextChannel?,
     @Transient
     var sender: User,
     _channelType: String,

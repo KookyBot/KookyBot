@@ -21,14 +21,14 @@ package io.github.zly2006.kookybot.client
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client.RequestType.*
-import io.github.zly2006.kookybot.contract.Channel
 import io.github.zly2006.kookybot.contract.Self
+import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.contract.User
 import io.github.zly2006.kookybot.contract.UserState
 import io.github.zly2006.kookybot.data
 import io.github.zly2006.kookybot.events.EventManager
 import io.github.zly2006.kookybot.events.MessageEvent
-import io.github.zly2006.kookybot.events.SelfOnlineEvent
+import io.github.zly2006.kookybot.events.self.SelfOnlineEvent
 import io.github.zly2006.kookybot.exception.KookRemoteException
 import io.github.zly2006.kookybot.message.SelfMessage
 import io.github.zly2006.kookybot.utils.Updatable
@@ -69,7 +69,7 @@ class Client (var token : String) {
     private val logger = LoggerFactory.getLogger(Client::class.java)
     private val context: CoroutineContext = EmptyCoroutineContext
     private val debug = true
-    private var lastSn = -1
+    private var lastSn = 0
     private var sessionId = ""
     private var resumeTimes = 0
     var pingDelay = 0L
@@ -84,12 +84,12 @@ class Client (var token : String) {
 
     private var pingStart = Calendar.getInstance().timeInMillis
     private var pingJob: Job = GlobalScope.launch {
-        try {
-            while (status != State.FatalError) {
+        while (status != State.FatalError) {
+            try {
                 delay(30000)
                 ping()
+            } catch (_: Exception) {
             }
-        } catch (_: Exception) {
         }
     }
 
@@ -240,6 +240,7 @@ class Client (var token : String) {
         logger.info("resuming")
         if (status != State.Disconnected) return
         webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME)).get("url").asString)
+        webSocketClient!!.connectBlocking()
         webSocketClient!!.send("{\"s\":4,\"sn\":$lastSn}")
         delay(6000)
         if (webSocketClient?.isOpen != true) {
@@ -278,6 +279,15 @@ class Client (var token : String) {
                                 sessionId = json.get("d").asJsonObject.get("session_id").asString
                                 self = Self(this@Client)
                             }
+                            4013 -> {
+                                this.closeBlocking()
+                                sessionId = ""
+                                lastSn = -1
+                                self = null
+                                GlobalScope.launch {
+                                    this@Client.connect()
+                                }
+                            }
                             else -> {
                                 throw Exception("KOOK login failed: code is $code\n  @see <https://developer.kookapp.cn/doc/websocket>")
                             }
@@ -289,7 +299,6 @@ class Client (var token : String) {
                         logger.debug("pong, delay = $pingDelay ms")
                     }
                     5 -> {
-                        pingJob.cancel()
                         this.closeBlocking()
                         sessionId = ""
                         lastSn = -1
@@ -406,7 +415,7 @@ class Client (var token : String) {
 
     fun sendChannelMessage(
         type: Int = 9,
-        target: Channel,
+        target: TextChannel,
         tempTarget: String? = null,
         nonce: String? = null,
         content: String,

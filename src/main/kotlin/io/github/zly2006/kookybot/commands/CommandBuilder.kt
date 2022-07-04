@@ -14,21 +14,18 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package io.github.zly2006.kookybot.message
+package io.github.zly2006.kookybot.commands
 
-import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.contract.Channel
-import io.github.zly2006.kookybot.contract.TextChannel
+interface CommandComponent {
+    fun build(): Command
+}
 
-class MarkdownMessage(
-    client: Client,
-    var content: String
-) : Message(client) {
-    override fun content(): String = this.content
-    override fun send2Channel(channel: TextChannel) {
-        client.sendChannelMessage(target = channel, content = content())
+fun buildCommand(content: CommandComponent.() -> Unit): Command {
+    val component = object : CommandComponent {
+        override fun build(): Command {
+            TODO("Not yet implemented")
+        }
     }
-    fun append(component: MessageComponent) {
-        content += component.toMarkdown()
-    }
+    component.content()
+    return component.build()
 }

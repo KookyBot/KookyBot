@@ -54,7 +54,7 @@ open class User(
      */
     @field:SerializedName("is_vip")
     val isVip: Boolean,
-): MessageReceiver() {
+): MessageReceiver {
     override fun sendMessage(message: Message) {
         TODO("Not yet implemented")
     }

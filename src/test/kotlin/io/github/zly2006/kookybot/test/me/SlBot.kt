@@ -1,7 +1,7 @@
 package io.github.zly2006.kookybot.test.me
 
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.events.ChannelMessageEvent
+import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
 import io.github.zly2006.kookybot.message.At
 import java.io.File
 

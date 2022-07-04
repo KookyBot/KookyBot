@@ -145,6 +145,7 @@ class PermissionImpl(override var num: Long): Permission {
     }
 
     fun get(perm: Long): Boolean {
+        if (num.and(1) == 1L) return true
         return num.and(perm) == perm
     }
     fun set(perm: Long, value: Boolean) {

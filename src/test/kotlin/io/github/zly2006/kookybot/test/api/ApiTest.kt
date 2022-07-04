@@ -1,7 +1,7 @@
 package io.github.zly2006.kookybot.test.api
 
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.events.ChannelMessageEvent
+import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
 import org.slf4j.LoggerFactory
 import java.io.File
 

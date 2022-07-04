@@ -19,6 +19,13 @@ package io.github.zly2006.kookybot.events
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
+import io.github.zly2006.kookybot.commands.Command
+import io.github.zly2006.kookybot.contract.TextChannel
+import io.github.zly2006.kookybot.events.channel.ChannelCancelReactionEvent
+import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
+import io.github.zly2006.kookybot.events.channel.ChannelPostReactionEvent
+import io.github.zly2006.kookybot.events.direct.DirectMessageEvent
+import io.github.zly2006.kookybot.events.self.SelfMessageEvent
 import io.github.zly2006.kookybot.message.SelfMessage
 import io.github.zly2006.kookybot.utils.Emoji
 import kotlin.reflect.KClass
@@ -39,15 +46,24 @@ class EventManager(
 ) {
     val listeners: MutableMap<KClass<out Event>, MutableList<SingleEventHandler<*>>> = mutableMapOf()
     val classListeners: MutableList<Listener1> = mutableListOf()
+    val commands: MutableList<Command> = mutableListOf()
     // 用于click处理
     val clickEvents: MutableList<Pair<String, (CardButtonClickEvent) -> Unit>> = mutableListOf()
 
+    fun parseCommand(input: String) {
+
+    }
+
     inline fun <reified T : Event> callEvent(event: T) {
-        if (event is CardButtonClickEvent) {
-            clickEvents.forEach {
-                if (it.first == event.value)
-                    it.second(event)
+        when (event) {
+            is CardButtonClickEvent -> {
+                clickEvents.forEach {
+                    if (it.first == event.value)
+                        it.second(event)
+                }
             }
+            is DirectMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event.content)
+            is ChannelMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event.content)
         }
         listeners[T::class]?.forEach { it ->
             try {
@@ -86,7 +102,7 @@ class EventManager(
                         }.firstOrNull { it != null }!!
                         MessageEvent.ChannelType.PERSON -> client.self!!.chattingUsers.firstOrNull { it.id == json.get("target_id").asString }!!
                         else -> TODO()
-                    },
+                    } as TextChannel,
                     content = json.get("content").asString
                 )))
             }
@@ -96,7 +112,7 @@ class EventManager(
             when (json.get("extra").asJsonObject.get("type").asString) {
                 "added_reaction" -> {
                     val channelPostReactionEvent = Gson().fromJson(json, ChannelPostReactionEvent::class.java)
-                    channelPostReactionEvent.channel = client.self!!.getChannel(json.get("extra").asJsonObject.get("channel_id").asString)!!
+                    channelPostReactionEvent.channel = client.self!!.getChannel(json.get("extra").asJsonObject.get("channel_id").asString)!! as TextChannel
                     channelPostReactionEvent.emoji = Emoji(
                         json.get("extra").asJsonObject.get("emoji").asJsonObject.get("id").asString,
                         json.get("extra").asJsonObject.get("emoji").asJsonObject.get("name").asString
@@ -108,7 +124,7 @@ class EventManager(
                 }
                 "deleted_reaction" -> {
                     val channelCancelReactionEvent = Gson().fromJson(json, ChannelCancelReactionEvent::class.java)
-                    channelCancelReactionEvent.channel = client.self!!.getChannel(json.get("extra").asJsonObject.get("channel_id").asString)!!
+                    channelCancelReactionEvent.channel = client.self!!.getChannel(json.get("extra").asJsonObject.get("channel_id").asString)!! as TextChannel
                     channelCancelReactionEvent.emoji = Emoji(
                         json.get("extra").asJsonObject.get("emoji").asJsonObject.get("id").asString,
                         json.get("extra").asJsonObject.get("emoji").asJsonObject.get("name").asString
@@ -121,7 +137,7 @@ class EventManager(
                 "message_btn_click" -> {
                     event.extra = event.extra.get("body").asJsonObject
                     val cardButtonClickEvent = Gson().fromJson(json, CardButtonClickEvent::class.java)
-                    cardButtonClickEvent.channel = client.self!!.getChannel(event.extra.get("target_id").asString)
+                    cardButtonClickEvent.channel = client.self!!.getChannel(event.extra.get("target_id").asString) as TextChannel
                     cardButtonClickEvent.sender = client.self!!.getUser(event.extra.get("user_id").asString)
                     cardButtonClickEvent.targetId = event.extra.get("msg_id").asString
                     cardButtonClickEvent.value = event.extra.get("value").asString
@@ -134,7 +150,7 @@ class EventManager(
             val guild = client.self!!.guilds.firstOrNull { it.id == json["extra"].asJsonObject["guild_id"].asString }
             channelMessageEvent.guild = guild!!
             val channel = guild.channels.firstOrNull { it.id == json["target_id"].asString }
-            channelMessageEvent.channel = channel!!
+            channelMessageEvent.channel = channel!! as TextChannel
             val user = client.self!!.getGuildUser(json["author_id"].asString, guild.id)!!
             channelMessageEvent.sender = user
             callEvent(channelMessageEvent)
@@ -144,10 +160,10 @@ class EventManager(
             if (client.self!!.chattingUsers.find { it.id == event.authorId } == null) {
                 client.self!!.updatePrivateChatUser(event.authorId)
             }
-            val privateMessageEvent = Gson().fromJson(json, PrivateMessageEvent::class.java)
-            privateMessageEvent.sender = client.self!!.chattingUsers.find { it.code == json.get("extra").asJsonObject.get("code").asString }!!
-            privateMessageEvent.sender.update()
-            callEvent(privateMessageEvent)
+            val directMessageEvent = Gson().fromJson(json, DirectMessageEvent::class.java)
+            directMessageEvent.sender = client.self!!.chattingUsers.find { it.code == json.get("extra").asJsonObject.get("code").asString }!!
+            directMessageEvent.sender.update()
+            callEvent(directMessageEvent)
         }
     }
 
@@ -163,5 +179,9 @@ class EventManager(
 
     fun addClassListener(listener: Listener1) {
         classListeners.add(listener)
+    }
+
+    fun addCommand(command: Command) {
+        commands.add(command)
     }
 }
