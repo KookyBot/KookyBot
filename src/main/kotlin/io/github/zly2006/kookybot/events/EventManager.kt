@@ -39,8 +39,16 @@ class EventManager(
 ) {
     val listeners: MutableMap<KClass<out Event>, MutableList<SingleEventHandler<*>>> = mutableMapOf()
     val classListeners: MutableList<Listener1> = mutableListOf()
+    // 用于click处理
+    val clickEvents: MutableList<Pair<String, (CardButtonClickEvent) -> Unit>> = mutableListOf()
 
     inline fun <reified T : Event> callEvent(event: T) {
+        if (event is CardButtonClickEvent) {
+            clickEvents.forEach {
+                if (it.first == event.value)
+                    it.second(event)
+            }
+        }
         listeners[T::class]?.forEach { it ->
             try {
                 it.handle(event)
@@ -51,7 +59,7 @@ class EventManager(
         }
         classListeners.forEach {
             it.javaClass.methods.forEach { method ->
-                if (method.annotations.contains(EventHandler()) && method.canAccess(it)) {
+                 if (method.annotations.find { it.annotationClass == EventHandler::class } != null) {
                     if (method.parameterTypes[0] == T::class.java) {
                         method.invoke(it, event)
                     }
@@ -109,6 +117,15 @@ class EventManager(
                     channelCancelReactionEvent.sender = client.self!!.getGuildUser(json.get("extra").asJsonObject.get("user_id").asString, channelCancelReactionEvent.guild.id)!!
                     channelCancelReactionEvent.targetId = json.get("extra").asJsonObject.get("msg_id").asString
                     callEvent(channelCancelReactionEvent)
+                }
+                "message_btn_click" -> {
+                    event.extra = event.extra.get("body").asJsonObject
+                    val cardButtonClickEvent = Gson().fromJson(json, CardButtonClickEvent::class.java)
+                    cardButtonClickEvent.channel = client.self!!.getChannel(event.extra.get("target_id").asString)
+                    cardButtonClickEvent.sender = client.self!!.getUser(event.extra.get("user_id").asString)
+                    cardButtonClickEvent.targetId = event.extra.get("msg_id").asString
+                    cardButtonClickEvent.value = event.extra.get("value").asString
+                    callEvent(cardButtonClickEvent)
                 }
             }
         }

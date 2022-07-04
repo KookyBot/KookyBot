@@ -16,8 +16,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.zly2006.kookybot.contract
 
+import com.google.gson.JsonArray
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.client.State
+import io.github.zly2006.kookybot.exception.KookRemoteException
 
 class Self(
     val client: Client,
@@ -40,7 +42,11 @@ class Self(
     val chattingUsers: List<PrivateChatUser> =
         with(client) {
             val jsonObject = sendRequest(requestBuilder(Client.RequestType.USER_CHAT_LIST))
-            return@with jsonObject.asJsonObject.get("items").asJsonArray.map { item ->
+            return@with try {
+                jsonObject.asJsonObject.get("items").asJsonArray
+            } catch (e: KookRemoteException) { // 没有用户给我报错
+                JsonArray()                    // 听我说谢谢你
+            }.map { item ->
                 val user = PrivateChatUser(code = item.asJsonObject.get("code").asString, client = client)
                 user.update()
                 return@map user
@@ -67,10 +73,10 @@ class Self(
         return guilds.firstOrNull { it.id == guild }?.users?.firstOrNull { it.id == id }
     }
 
-    fun updatePrivateChatUser(userId: String): PrivateChatUser {
+    internal fun updatePrivateChatUser(userId: String): PrivateChatUser {
         val jsonObject = with(client){sendRequest(requestBuilder(Client.RequestType.USER_CHAT_LIST))}
         val code = jsonObject.asJsonObject.get("items").asJsonArray.find {
-            it.asJsonObject.get("target_indo").asJsonObject.get("id").asString == userId
+            it.asJsonObject.get("target_info").asJsonObject.get("id").asString == userId
         }!!.asJsonObject.get("code").asString
         val user = PrivateChatUser(code = code, client = client)
         user.update()

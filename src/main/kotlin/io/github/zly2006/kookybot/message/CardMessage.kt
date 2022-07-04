@@ -23,6 +23,8 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.contract.Channel
+import io.github.zly2006.kookybot.events.CardButtonClickEvent
+import java.util.*
 
 class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Message(
     client) {
@@ -85,14 +87,21 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
             value: String = "",
             click: ClickType = ClickType.None,
             text: CardComponent,
+            onclick: ((CardButtonClickEvent) -> Unit)? = null
         ): CardComponent {
+            val id = if (value == "") UUID.randomUUID().toString() else value
+            var clickType = click
+            if (onclick != null) {
+                client.eventManager.clickEvents.add(id to onclick)
+                clickType = ClickType.ReturnValue
+            }
             return object : CardComponent() {
                 override fun toJson(): JsonElement {
                     val obj = JsonObject()
                     obj.addProperty("type", "button")
                     obj.addProperty("theme", theme.name.lowercase())
-                    obj.addProperty("value", value)
-                    obj.addProperty("click", when (click) {
+                    obj.addProperty("value", id)
+                    obj.addProperty("click", when (clickType) {
                         ClickType.None -> ""
                         ClickType.Link -> "link"
                         ClickType.ReturnValue -> "return-val"
@@ -152,13 +161,19 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
             accessory: CardComponent,
             mode: LeftRight = LeftRight.Right
         ) {
+
             val obj = object : CardComponent() {
                 override fun toJson(): JsonElement {
                     val obj = JsonObject()
                     obj.addProperty("type", "section")
                     obj.add("text", text.toJson())
                     obj.add("accessory", accessory.toJson())
-                    obj.addProperty("mode", mode.name.lowercase())
+                    obj.addProperty("mode", (
+                            if (accessory.toJson().asJsonObject.get("type").asString == "button")
+                                LeftRight.Right
+                            else
+                                mode
+                            ).name.lowercase())
                     return obj
                 }
             }
@@ -311,7 +326,8 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
             value: String = "",
             click: ClickType = ClickType.None,
             text: CardComponent,
-        ) = component.add(MessageScope().ButtonElement(theme, value, click, text))
+            onclick: ((CardButtonClickEvent) -> Unit)? = null
+        ) = component.add(MessageScope().ButtonElement(theme, value, click, text, onclick))
     }
     private val root: CardComponent = object : CardComponent() {
         var arr: MutableList<CardComponent> = mutableListOf()

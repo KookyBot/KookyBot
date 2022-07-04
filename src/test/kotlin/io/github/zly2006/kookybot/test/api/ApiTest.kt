@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 
 suspend fun main() {
-    
+
     val token = File("data/token.txt").readText()
     val client = Client(token)
     val self = client.start()
@@ -18,6 +18,16 @@ suspend fun main() {
                 Card {
                     HeaderModule(PlainTextElement("Hello"))
                     Divider()
+                }
+                Card {
+                    SectionModule(
+                        text = MarkdownElement("**Click Me!**"),
+                        accessory = ButtonElement(
+                            text = PlainTextElement("hi"),
+                            onclick = {
+                                it.channel?.sendMessage("hi~")
+                            })
+                    )
                 }
             }
         }

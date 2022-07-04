@@ -33,6 +33,7 @@ enum class UserState {
 }
 
 open class User(
+    @Transient
     override var client: Client,
     override val id: String,
     val online: Boolean,

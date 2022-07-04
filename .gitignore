@@ -7,3 +7,5 @@
 
 # my files
 /src/test/kotlin/io/github/zly2006/kookybot/test/me/*
+# old gradle
+build.gradle_old

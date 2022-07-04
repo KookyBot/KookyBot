@@ -16,9 +16,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.zly2006.kookybot.events
 
+import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
 
-abstract class MessageEvent(
+open class MessageEvent(
     @field:SerializedName("channel_type")
     private var _channelType: String,
     @field:SerializedName("type")
@@ -32,7 +33,8 @@ abstract class MessageEvent(
     @field:SerializedName("message_id")
     var sid: String,
     @field:SerializedName("msg_timestamp")
-    var timestamp: String
+    var timestamp: String,
+    var extra: JsonObject = JsonObject()
 ): Event {
     enum class EventType {
         UNKNOWN,

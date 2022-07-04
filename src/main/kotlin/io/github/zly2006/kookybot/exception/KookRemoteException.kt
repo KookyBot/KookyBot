@@ -20,11 +20,9 @@ import java.net.http.HttpRequest
 
 class KookRemoteException(
     val code: Int,
-    override val message: String?,
+    val msg: String,
     val request: HttpRequest? = null
 ) : Exception() {
-    override fun printStackTrace() {
-        System.err.println("code=$code,request url=${request?.uri()}")
-        super.printStackTrace()
-    }
+    override val message: String
+        get() = "code=$code,message=$msg,request url=${request?.uri()}"
 }

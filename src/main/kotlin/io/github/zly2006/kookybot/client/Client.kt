@@ -71,7 +71,7 @@ class Client (var token : String) {
     private val debug = true
     private var lastSn = -1
     private var sessionId = ""
-    private var pingTimes = 0
+    private var resumeTimes = 0
     var pingDelay = 0L
     var status = State.Initialized
     var pingStatus = PingState.Success
@@ -199,7 +199,7 @@ class Client (var token : String) {
             USER_ME -> builder.uri(apiOf("/user/me")).GET()
             VIEW_CHANNEL -> builder.uri(apiOf("/channel/view?target_id=${values!!["channel_id"]}")).GET()
             USER_CHAT_LIST -> builder.uri(apiOf("/user-chat/list")).GET()
-            USER_CHAT_VIEW -> builder.uri(apiOf("/user-chat/view?")).GET()
+            USER_CHAT_VIEW -> builder.uri(apiOf("/user-chat/view?chat_code=${values!!["chat_code"]}")).GET()
             CREATE_ASSET -> builder.uri(apiOf("/asset/create"))
                 .header("content-type", "form-data")
                 .POST(postAll(values!!))
@@ -238,14 +238,14 @@ class Client (var token : String) {
 
     private suspend fun resume() {
         logger.info("resuming")
-        if (status == State.Connected) return
-        sendRequest(requestBuilder(GATEWAY_RESUME))
+        if (status != State.Disconnected) return
+        webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME)).get("url").asString)
         webSocketClient!!.send("{\"s\":4,\"sn\":$lastSn}")
         delay(6000)
         if (webSocketClient?.isOpen != true) {
             logger.info("resume failed.")
-            pingTimes ++
-            if (pingTimes == 2) {
+            resumeTimes++
+            if (resumeTimes == 2) {
                 connect()
             }
             else{
@@ -261,13 +261,11 @@ class Client (var token : String) {
             }
 
             override fun onMessage(message: String) {
-                pingTimes = 0
+                resumeTimes = 0
                 var json = Gson().fromJson(message, JsonObject::class.java)
                 when (json.get("s").asInt) {
                     0 -> {
-                        if (debug) {
-                            logger.info("[Event received] $message")
-                        }
+                        logger.debug("[Event received] $message")
                         lastSn = json.get("sn").asInt
                         json = json["d"].asJsonObject
                         eventManager.callEventRaw(json)
@@ -310,9 +308,9 @@ class Client (var token : String) {
 
             override fun onClose(code: Int, reason: String, remote: Boolean) {
                 logger.info("websocket closed")
-                //status = State.Disconnected
+                status = State.Disconnected
                 GlobalScope.launch {
-              //      this@Client.connect()
+                    this@Client.resume()
                 }
             }
             override fun onError(ex: java.lang.Exception) {
