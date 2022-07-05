@@ -1,9 +1,10 @@
 package io.github.zly2006.kookybot.commands
 
-class Command(
+abstract class Command(
     val name: String,
-    val alias: List<String>,
-    val permission: String,
-    val description: String
+    val alias: List<String> = listOf(),
+    val permission: String? = null,
+    val description: String? = null
 ) {
+    abstract fun onExecute(source: CommandSource)
 }

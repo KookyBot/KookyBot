@@ -14,24 +14,21 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package io.github.zly2006.kookybot.message
+package io.github.zly2006.kookybot.plugin;
 
-import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.contract.MessageReceiver
-import io.github.zly2006.kookybot.contract.TextChannel
+import org.jetbrains.annotations.NotNull;
+import org.yaml.snakeyaml.Yaml;
 
-abstract class Message(
-    protected val client: Client,
-    open var quote: String? = null
-) {
-    open fun content(): String {
-        return ""
+public class JavaPlugin implements Plugin{
+    @NotNull
+    @Override
+    public Yaml getConfig() {
+        return new Yaml();
     }
-    abstract val type: Int
-    abstract fun send2Channel(channel: TextChannel)
-    open fun send(messageReceiver: MessageReceiver) {
-        if (messageReceiver is TextChannel) {
-            send2Channel(messageReceiver)
-        }
-    }
+
+    @Override
+    public void onEnable() {}
+
+    @Override
+    public void onDisable() {}
 }

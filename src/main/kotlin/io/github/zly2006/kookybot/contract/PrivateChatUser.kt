@@ -18,6 +18,7 @@ package io.github.zly2006.kookybot.contract
 
 import com.google.gson.annotations.SerializedName
 import io.github.zly2006.kookybot.client.Client
+import io.github.zly2006.kookybot.message.MarkdownMessage
 import io.github.zly2006.kookybot.utils.DontUpdate
 import io.github.zly2006.kookybot.utils.Updatable
 
@@ -55,6 +56,12 @@ class PrivateChatUser(
     override fun update() {
         updateByJson(with(client) {
             sendRequest(requestBuilder(Client.RequestType.USER_CHAT_VIEW, "chat_code" to code))
+            //TODO: id
         })
+    }
+    fun sendMessage(message: String, quote: String? = null) {
+        val msg = MarkdownMessage(client, message)
+        msg.quote = quote
+        sendMessage(msg)
     }
 }

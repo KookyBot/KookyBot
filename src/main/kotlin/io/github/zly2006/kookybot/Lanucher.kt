@@ -16,34 +16,54 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.zly2006.kookybot
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.withContext
+import io.github.zly2006.kookybot.plugin.Plugin
 import java.io.File
+import java.net.URLClassLoader
 
-suspend fun main() {
-    if (!File("data/").exists())
-        File("data/").mkdir()
-    if (!File("data/token.txt").isFile) {
-        withContext(Dispatchers.IO) {
+interface Lanucher {
+    val plugins: MutableList<Plugin>
+}
+
+val launcher = object : Lanucher {
+    init {
+        if (!File("data/").exists())
+            File("data/").mkdir()
+        if (!File("plugins/").exists())
+            File("plugins/").mkdir()
+        if (!File("data/token.txt").isFile) {
             File("data/token.txt").createNewFile()
+            println("please fill your token in data/token/txt")
         }
-        println("please fill your token in data/token/txt")
-        return
-    }
-    val token = File("data/token.txt").readText()
-    val client = Client(token)
-    val self = client.start()
-    client.eventManager.addListener<ChannelMessageEvent> {
-        if (content.contains("hello")) {
-            channel.sendCardMessage {
-                Card {
-                    HeaderModule(PlainTextElement("Hello"))
-                    Divider()
-                }
+        File("plugins/").listFiles()?.forEach {
+            if (it.name.endsWith(".jar")) run {
+                val loader = URLClassLoader(arrayOf(it.toURI().toURL()))
+                val content = loader.getResource("plugin.yml").content
+            }
+            if (it.name.endsWith(".class")) run {
+                val loader = URLClassLoader(arrayOf(it.parentFile.toURI().toURL()))
+                loader.loadClass(it.nameWithoutExtension)
             }
         }
     }
-    awaitCancellation()
+
+    override val plugins: MutableList<Plugin>
+        get() = TODO("Not yet implemented")
+}
+
+suspend fun main() {
+    val token = File("data/token.txt").readText()
+    val client = Client(token)
+    val self = client.start()
+    while (true) {
+        val cmd = readln().split(' ')
+        when (cmd[0]) {
+            "license" -> {
+                println("KookyBot Console")
+                println("This is a free software under AGPL v3.")
+                println("Copyright (c) 2022, zly2006 & contributors.")
+
+                println("Reference & thx: khl-voice-API by hank9999 at <https://github.com/hank9999/khl-voice-API>")
+            }
+        }
+    }
 }

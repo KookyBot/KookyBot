@@ -56,6 +56,18 @@ open class User(
     val isVip: Boolean,
 ): MessageReceiver {
     override fun sendMessage(message: Message) {
-        TODO("Not yet implemented")
+        client.sendUserMessage(
+            target = talkTo(),
+            content = message.content()
+        )
+    }
+    fun talkTo(): PrivateChatUser {
+        return (client.self!!.chattingUsers.find { it.id == id }) ?: let {
+            client.sendRequest(client.requestBuilder(Client.RequestType.CREATE_CHAT, "target_id" to id))
+            return client.self!!.updatePrivateChatUser(id)
+        }
+    }
+    fun atGuild(guild: Guild): GuildUser? {
+        return client.self!!.getGuildUser(id, guild.id)
     }
 }

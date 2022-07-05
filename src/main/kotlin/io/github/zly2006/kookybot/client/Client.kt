@@ -44,6 +44,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -57,6 +58,7 @@ enum class State {
     Connected,
     Disconnected,
     FatalError,
+    Closed,
 }
 
 enum class PingState {
@@ -72,6 +74,7 @@ class Client (var token : String) {
     private var lastSn = 0
     private var sessionId = ""
     private var resumeTimes = 0
+    var voiceWebSocketClient: WebSocketClient? = null
     var pingDelay = 0L
     var status = State.Initialized
     var pingStatus = PingState.Success
@@ -136,6 +139,8 @@ class Client (var token : String) {
         USER_CHAT_VIEW,
         CREATE_ASSET,
         GUILD_USER_LIST,
+        VOICE_GATEWAY,
+        OFFLINE,
     }
 
     private suspend fun ping() {
@@ -168,7 +173,7 @@ class Client (var token : String) {
                 is Boolean -> ret.addProperty(it.key, it.value as Boolean)
             }
         }
-        logger.trace("Client.postAll: returning $ret")
+        logger.debug("Client.postAll: returning $ret")
         return BodyPublishers.ofString(ret.toString())
     }
 
@@ -183,8 +188,8 @@ class Client (var token : String) {
     fun requestBuilder(requestType: RequestType, values: Map<String, Any?>? = null): HttpRequest {
         val builder = HttpRequest.newBuilder().header("Authorization", "Bot $token")
         when (requestType) {
-            GATEWAY -> builder.uri(apiOf("/gateway/index?compress=0")).GET()
-            GATEWAY_RESUME -> builder.uri(apiOf("/gateway/index?compress=0&sn=$lastSn&resume=1&session_id=$sessionId")).GET()
+            GATEWAY -> builder.uri(apiOf("/gateway/index")).GET()
+            GATEWAY_RESUME -> builder.uri(apiOf("/gateway/index?sn=$lastSn&resume=1&session_id=$sessionId")).GET()
             GUILD_LIST -> builder.uri(apiOf("/guild/list")).GET()
             GUILD_VIEW -> builder.uri(apiOf("/guild/view?guild_id=${values!!["guild_id"]}")).GET()
             USER_VIEW -> builder.uri(apiOf("/user/view?user_id=${values!!["user_id"]}")).GET()
@@ -219,6 +224,10 @@ class Client (var token : String) {
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
             GUILD_USER_LIST -> builder.uri(apiOf("/guild/user-list?guild_id=${values!!["guild_id"]}")).GET()
+            VOICE_GATEWAY -> builder.uri(apiOf("/gateway/voice?channel_id=${values!!["channel_id"]}")).GET()
+            OFFLINE -> builder.uri(apiOf("/user/offline"))
+                .header("content-type", "application/json")
+                .POST(postAll(mapOf()))
         }
         return builder.build()
     }
@@ -261,12 +270,19 @@ class Client (var token : String) {
                 logger.debug("websocket opened: http status=${handshakedata.httpStatus}")
             }
 
+            override fun onMessage(bytes: ByteBuffer?) {
+                if (bytes == null) return
+                onMessage(
+                    InflaterInputStream(bytes.array().inputStream()).bufferedReader().readText()
+                )
+            }
+
             override fun onMessage(message: String) {
+                logger.debug("[Event received] $message")
                 resumeTimes = 0
                 var json = Gson().fromJson(message, JsonObject::class.java)
                 when (json.get("s").asInt) {
                     0 -> {
-                        logger.debug("[Event received] $message")
                         lastSn = json.get("sn").asInt
                         json = json["d"].asJsonObject
                         eventManager.callEventRaw(json)
@@ -279,15 +295,11 @@ class Client (var token : String) {
                                 sessionId = json.get("d").asJsonObject.get("session_id").asString
                                 self = Self(this@Client)
                             }
-                            4013 -> {
-                                this.closeBlocking()
-                                sessionId = ""
-                                lastSn = -1
-                                self = null
-                                GlobalScope.launch {
-                                    this@Client.connect()
-                                }
-                            }
+                            40101 -> throw Error("token无效，请使用正确的token")
+                            40102 -> throw Error("token无效，请使用正确的token")
+                            40103 -> this@Client.reconnect()
+                            40107 -> this@Client.reconnect()
+                            40108 -> this@Client.reconnect()
                             else -> {
                                 throw Exception("KOOK login failed: code is $code\n  @see <https://developer.kookapp.cn/doc/websocket>")
                             }
@@ -299,24 +311,20 @@ class Client (var token : String) {
                         logger.debug("pong, delay = $pingDelay ms")
                     }
                     5 -> {
-                        this.closeBlocking()
-                        sessionId = ""
-                        lastSn = -1
-                        self = null
-                        GlobalScope.launch {
-                            this@Client.connect()
-                        }
+                        this@Client.reconnect()
                     }
                     6 -> {
                         pingStatus = PingState.Success
                         status = State.Connected
                         sessionId = json.get("d").asJsonObject.get("session_id").asString
+                        logger.info("resume ok!")
                     }
                 }
             }
 
             override fun onClose(code: Int, reason: String, remote: Boolean) {
                 logger.info("websocket closed")
+                if (status == State.Closed) return
                 status = State.Disconnected
                 GlobalScope.launch {
                     this@Client.resume()
@@ -325,6 +333,18 @@ class Client (var token : String) {
             override fun onError(ex: java.lang.Exception) {
                 ex.printStackTrace()
             }
+        }
+    }
+
+    fun reconnect() {
+        logger.info("reconnecting")
+        webSocketClient!!.closeBlocking()
+        sessionId = ""
+        lastSn = -1
+        self = null
+        GlobalScope.launch {
+            delay(10000)
+            this@Client.connect()
         }
     }
 
@@ -465,5 +485,12 @@ class Client (var token : String) {
     fun upload(file: File): String {
         val data = file.readBytes()
         return sendRequest(requestBuilder(CREATE_ASSET, "file" to data.toString(StandardCharsets.US_ASCII))).get("url").asString
+    }
+    fun close() {
+        sendRequest(requestBuilder(OFFLINE))
+        status = State.Closed
+        webSocketClient?.closeBlocking()
+        pingJob.cancel()
+        updateJob?.cancel()
     }
 }

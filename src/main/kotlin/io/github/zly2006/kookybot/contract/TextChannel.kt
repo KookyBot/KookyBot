@@ -20,20 +20,34 @@ class TextChannel(client: Client, id: String, guild: Guild) : Channel(client, id
         )
     }
 
-    fun sendMessage(message: String) {
+    fun sendMessage(message: Message, tempTarget: GuildUser) {
+        var type = 9
+        when (message) {
+            is CardMessage -> type = 10
+            is MarkdownMessage -> type = 9
+        }
         client.sendChannelMessage(
-            content = message,
-            target = this
+            type = type,
+            content = message.content(),
+            target = this,
+            quote = message.quote,
+            tempTarget = tempTarget.id
         )
     }
 
-    fun sendMarkdownMessage(message: String) {
-        sendMessage(MarkdownMessage(client, message))
+    fun sendMessage(message: String, tempTarget: GuildUser? = null) {
+        if (tempTarget == null)
+            sendMessage(MarkdownMessage(client, message))
+        else
+            sendMessage(MarkdownMessage(client, message), tempTarget)
     }
 
-    fun sendCardMessage(content: CardMessage.MessageScope.() -> Unit) {
+    fun sendCardMessage(tempTarget: GuildUser? = null, content: CardMessage.MessageScope.() -> Unit) {
         val msg = CardMessage(client = client,
             contentBuilder = content)
-        sendMessage(msg)
+        if (tempTarget == null)
+            sendMessage(msg)
+        else
+            sendMessage(msg, tempTarget)
     }
 }

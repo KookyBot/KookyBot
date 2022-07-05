@@ -22,9 +22,9 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.contract.Channel
 import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.events.CardButtonClickEvent
+import org.slf4j.LoggerFactory
 import java.util.*
 
 class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Message(
@@ -353,8 +353,9 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
             content = content()
         )
     }
-
+    override val type: Int = 10
     init {
         MessageScope().contentBuilder()
+        LoggerFactory.getLogger(this::class.java).debug(content())
     }
 }

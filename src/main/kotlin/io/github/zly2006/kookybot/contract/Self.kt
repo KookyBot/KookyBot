@@ -20,12 +20,13 @@ import com.google.gson.JsonArray
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.client.State
 import io.github.zly2006.kookybot.exception.KookRemoteException
+import org.slf4j.LoggerFactory
 
 class Self(
     val client: Client,
-    val id: String = client.sendRequest(client.requestBuilder(Client.RequestType.USER_ME))
-        .asJsonObject.get("id").asString
 ) {
+    val logger = LoggerFactory.getLogger(this::class.java)
+    val id: String
     val guilds: List<Guild> = let {
         val list: MutableList<Guild> = mutableListOf()
         with (client) {
@@ -56,15 +57,6 @@ class Self(
         return client.getUser(userId)
     }
 
-    /**
-     * 这只会缓存100条消息
-     *
-     *
-     */
-    fun getCachedMessage(messageId: String) {
-        TODO()
-    }
-
     fun getChannel(id: String): Channel? {
         return guilds.map { guild -> guild.channels.firstOrNull { channel -> channel.id == id } }.firstOrNull { it != null }
     }
@@ -78,9 +70,16 @@ class Self(
         val code = jsonObject.asJsonObject.get("items").asJsonArray.find {
             it.asJsonObject.get("target_info").asJsonObject.get("id").asString == userId
         }!!.asJsonObject.get("code").asString
-        val user = PrivateChatUser(code = code, client = client)
+        val user = PrivateChatUser(code = code, client = client, id = userId)
         user.update()
         (chattingUsers as MutableList).add(user)
         return user
+    }
+
+    init {
+        val json =client.sendRequest(client.requestBuilder(Client.RequestType.USER_ME))
+            .asJsonObject
+        id = json.get("id").asString
+        logger.info("${json.get("username").asString}#${json.get("identify_num").asString} $id")
     }
 }

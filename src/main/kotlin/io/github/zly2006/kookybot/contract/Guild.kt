@@ -89,8 +89,8 @@ class Guild(
                 channel.update()
                 return@map channel
             }
-            defaultChannel = channels.firstOrNull { it.id == g.asJsonObject.get("default_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel
-            welcomeChannel = channels.firstOrNull { it.id == g.asJsonObject.get("welcome_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel
+            defaultChannel = channels.firstOrNull { it.id == g.asJsonObject.get("default_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
+            welcomeChannel = channels.firstOrNull { it.id == g.asJsonObject.get("welcome_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
 
 
             // bot permission

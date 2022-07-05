@@ -22,14 +22,14 @@ public class JavaApiTest extends JavaBaseClass {
         @EventHandler
         public void onHello(ChannelMessageEvent event) {
             if (event.getContent().contains("hello")) {
-                event.getChannel().sendCardMessage(messageScope -> {
+                event.getChannel().sendCardMessage(null, messageScope -> {
                     messageScope.Card(CardMessage.Size.LG, CardMessage.Theme.Primary, "#aaaaaa",
                             cardScope -> {
                                 cardScope.SectionModule(messageScope.PlainTextElement("hello"),
                                         messageScope.ButtonElement(CardMessage.Theme.Primary, "", CardMessage.ClickType.ReturnValue,
                                                 messageScope.PlainTextElement("hi"), cardButtonClickEvent -> {
                                                     assert cardButtonClickEvent.getChannel() != null;
-                                                    cardButtonClickEvent.getChannel().sendMessage("hi!!");
+                                                    cardButtonClickEvent.getChannel().sendMessage("hi!!", null);
                                                     return null;
                                                 }), CardMessage.LeftRight.Right);
                                 return null;

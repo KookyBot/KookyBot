@@ -1,7 +1,6 @@
 package io.github.zly2006.kookybot.events
 
 import com.google.gson.JsonObject
-import io.github.zly2006.kookybot.contract.Channel
 import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.contract.User
 
@@ -19,4 +18,6 @@ class CardButtonClickEvent (
     sid: String,
     timestamp: String,
     extra: JsonObject = JsonObject()
-): MessageEvent(_channelType, _type, targetId, authorId, content, sid, timestamp, extra)
+): MessageEvent(_channelType, _type, targetId, authorId, content, sid, timestamp, extra) {
+
+}

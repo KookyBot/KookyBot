@@ -20,6 +20,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.commands.Command
+import io.github.zly2006.kookybot.commands.CommandSource
 import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.events.channel.ChannelCancelReactionEvent
 import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
@@ -50,8 +51,61 @@ class EventManager(
     // 用于click处理
     val clickEvents: MutableList<Pair<String, (CardButtonClickEvent) -> Unit>> = mutableListOf()
 
-    fun parseCommand(input: String) {
-
+    fun parseCommand(event: MessageEvent) {
+        if (!event.content.startsWith('/')) return
+        val args = mutableListOf<String>()
+        event.content.substring(1 until event.content.length).split(' ').map {
+            if (it == "") listOf()
+            else if (it.contains("(met")) {
+                listOf(it)
+            } else
+                listOf(it)
+        }.forEach { args.addAll(it) }
+        if (args.size == 0) {
+            when (event) {
+                is DirectMessageEvent -> event.sender.sendMessage("找不到命令")
+                is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)找不到命令")
+            }
+            return
+        }
+        var command = commands.find { it.name == args[0] }
+        if (command == null) {
+            command = commands.find { it.alias.contains(args[0]) }
+            if (command == null) {
+                when (event) {
+                    is DirectMessageEvent -> event.sender.sendMessage("找不到命令")
+                    is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)找不到命令")
+                }
+                return
+            }
+        }
+        val source  = when (event) {
+            is DirectMessageEvent -> CommandSource(
+                user = event.sender,
+                label = args[0],
+                args = if (args.size == 1) arrayOf<String>() else args.subList(1, args.size).toTypedArray(),
+                command = command,
+                channel = null
+            )
+            is ChannelMessageEvent -> CommandSource(
+                user = event.sender,
+                label = args[0],
+                args = if (args.size == 1) arrayOf<String>() else args.subList(1, args.size).toTypedArray(),
+                command = command,
+                channel = event.channel
+            )
+            else -> throw Exception()
+        }
+        try {
+            command.onExecute(source)
+        }
+        catch (e: Exception) {
+            when (event) {
+                is DirectMessageEvent -> event.sender.sendMessage("执行命令时发生了错误，请联系开发者")
+                is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)执行命令时发生了错误，请联系开发者")
+            }
+            e.printStackTrace()
+        }
     }
 
     inline fun <reified T : Event> callEvent(event: T) {
@@ -62,8 +116,8 @@ class EventManager(
                         it.second(event)
                 }
             }
-            is DirectMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event.content)
-            is ChannelMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event.content)
+            is DirectMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event)
+            is ChannelMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event)
         }
         listeners[T::class]?.forEach { it ->
             try {
