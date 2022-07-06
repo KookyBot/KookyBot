@@ -20,21 +20,22 @@ import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.message.CardMessage
 import io.github.zly2006.kookybot.message.MarkdownMessage
 import io.github.zly2006.kookybot.message.Message
+import io.github.zly2006.kookybot.message.SelfMessage
 
 interface MessageReceiver {
-    fun sendMessage(message: Message) {
+    fun sendMessage(message: Message): SelfMessage {
         when (this) {
             is TextChannel -> {
                 when (message) {
                     is CardMessage -> {
-                        client.sendChannelMessage(
+                        return client.sendChannelMessage(
                             type = 10,
                             target = this,
                             content = message.content()
                         )
                     }
                     is MarkdownMessage -> {
-                        client.sendChannelMessage(
+                        return client.sendChannelMessage(
                             target = this,
                             content = message.content()
                         )
@@ -42,6 +43,7 @@ interface MessageReceiver {
                 }
             }
         }
+        throw Exception("invalid type")
     }
     abstract val id: String
     abstract val client: Client

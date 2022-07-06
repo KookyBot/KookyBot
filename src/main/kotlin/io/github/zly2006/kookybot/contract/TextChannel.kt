@@ -4,15 +4,16 @@ import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.message.CardMessage
 import io.github.zly2006.kookybot.message.MarkdownMessage
 import io.github.zly2006.kookybot.message.Message
+import io.github.zly2006.kookybot.message.SelfMessage
 
 class TextChannel(client: Client, id: String, guild: Guild) : Channel(client, id, guild), MessageReceiver {
-    override fun sendMessage(message: Message) {
+    override fun sendMessage(message: Message): SelfMessage {
         var type = 9
         when (message) {
             is CardMessage -> type = 10
             is MarkdownMessage -> type = 9
         }
-        client.sendChannelMessage(
+        return client.sendChannelMessage(
             type = type,
             content = message.content(),
             target = this,

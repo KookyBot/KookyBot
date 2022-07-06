@@ -3,15 +3,16 @@ package io.github.zly2006.kookybot.test.api
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.commands.Command
 import io.github.zly2006.kookybot.commands.CommandContext
+import io.github.zly2006.kookybot.commands.RequireChannel
 import io.github.zly2006.kookybot.contract.PrivateChatUser
 import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
 import io.github.zly2006.kookybot.message.CardMessage
+import io.github.zly2006.kookybot.message.SelfMessage
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.*
 
 suspend fun main() {
-
     val token = File("data/token.txt").readText()
     val client = Client(token)
     val self = client.start()
@@ -125,6 +126,55 @@ suspend fun main() {
                     context.channel!!.sendMessage(context.channel!!.guild.createTextChannel(context.args[1]).id)
                 }
             }
+        }
+    })
+    client.eventManager.addCommand(object : Command("vote") {
+        var list: List<MutableList<String>> = listOf()
+        var selfMessage: SelfMessage? = null
+        var context: CommandContext? = null
+        fun CardMessage.MessageScope.card() {
+            Card {
+                HeaderModule(PlainTextElement(context!!.args[0]))
+                for (i in (1 until context!!.args.size)) {
+                    val id = UUID.randomUUID().toString()
+                    SectionModule(
+                        text = MarkdownElement(context!!.args[i]),
+                        accessory = ButtonElement(
+                            text = PlainTextElement("选择"),
+                        ) {
+                            with(it) {
+                                if (list.map { it.contains(sender.id) }.contains(true)) {
+                                    channel!!.sendMessage("voted", sender.atGuild(channel!!.guild))
+                                    return@with
+                                }
+                                list[i].add(sender.id)
+                                channel!!.sendMessage("ok", sender.atGuild(channel!!.guild))
+                                selfMessage!!.edit(CardMessage(client) {
+                                    card()
+                                }.content())
+                            }
+                        }
+                    )
+                    ContextModule {
+                        MarkdownElement(
+                            "> " +
+                                    (list[i].firstOrNull() ?: "") +
+                                    "等" +
+                                    list[i].size +
+                                    "人选择了此选项"
+                        )
+                    }
+                }
+            }
+        }
+        @RequireChannel(id = "7118025577525135")
+        override fun onExecute(context: CommandContext) {
+            list = (0 until  context.args.size).map { mutableListOf() }
+            this.context = context
+            val card = CardMessage(client) {
+                card()
+            }
+            selfMessage = context.channel!!.sendMessage(card)
         }
     })
     while (true) {

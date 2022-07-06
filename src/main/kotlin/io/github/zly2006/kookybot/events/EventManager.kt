@@ -19,12 +19,11 @@ package io.github.zly2006.kookybot.events
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.mojang.brigadier.CommandDispatcher
-import com.mojang.brigadier.arguments.StringArgumentType
-import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.commands.Command
 import io.github.zly2006.kookybot.commands.CommandContext
+import io.github.zly2006.kookybot.commands.RequireChannel
+import io.github.zly2006.kookybot.commands.RequireGuild
 import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.events.channel.ChannelCancelReactionEvent
 import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
@@ -58,12 +57,6 @@ class EventManager(
     val clickEvents: MutableList<Pair<String, (CardButtonClickEvent) -> Unit>> = mutableListOf()
 
     init {
-        dispatcher.register(literal<CommandContext?>("aaa")
-            .then(argument<CommandContext?, String?>("arg", StringArgumentType.word())
-                .executes{
-                    0
-                }
-            ))
         commands.add(object : Command("help") {
             override fun onExecute(context: CommandContext) {
                 if (context.channel != null) {
@@ -108,14 +101,14 @@ class EventManager(
             is DirectMessageEvent -> CommandContext(
                 user = event.sender,
                 label = args[0],
-                args = if (args.size == 1) arrayOf<String>() else args.subList(1, args.size).toTypedArray(),
+                args = if (args.size == 1) arrayOf() else args.subList(1, args.size).toTypedArray(),
                 command = command,
                 channel = null
             )
             is ChannelMessageEvent -> CommandContext(
                 user = event.sender,
                 label = args[0],
-                args = if (args.size == 1) arrayOf<String>() else args.subList(1, args.size).toTypedArray(),
+                args = if (args.size == 1) arrayOf() else args.subList(1, args.size).toTypedArray(),
                 command = command,
                 channel = event.channel
             )
@@ -123,6 +116,22 @@ class EventManager(
         }
         //dispatcher.execute(event.content.substring(1 until event.content.length), source)
         try {
+            for (annotation in command.javaClass.getMethod("onExecute", CommandContext::class.java).annotations) {
+                if (annotation is RequireGuild) {
+                    if (event is ChannelMessageEvent) {
+                        if (event.guild.id != annotation.id) {
+                            return
+                        }
+                    }
+                }
+                if (annotation is RequireChannel) {
+                    if (event is ChannelMessageEvent) {
+                        if (event.channel.id != annotation.id) {
+                            return
+                        }
+                    }
+                }
+            }
             command.onExecute(source)
         }
         catch (e: Exception) {

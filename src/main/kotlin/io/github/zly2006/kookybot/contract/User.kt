@@ -19,6 +19,7 @@ package io.github.zly2006.kookybot.contract
 import com.google.gson.annotations.SerializedName
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.message.Message
+import io.github.zly2006.kookybot.message.SelfMessage
 
 /**
  * 警告：
@@ -55,8 +56,8 @@ open class User(
     @field:SerializedName("is_vip")
     val isVip: Boolean,
 ): MessageReceiver {
-    override fun sendMessage(message: Message) {
-        client.sendUserMessage(
+    override fun sendMessage(message: Message): SelfMessage {
+        return client.sendUserMessage(
             target = talkTo(),
             content = message.content()
         )

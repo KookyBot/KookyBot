@@ -166,6 +166,7 @@ class Client (var token : String) {
             delay(6000)
             if (pingStatus == PingState.Pinging) {
                 pingStatus = PingState.Timeout
+                logger.error("timeout")
                 if (status == State.Closed) return@launch
                 status = State.Disconnected
                 resume()
@@ -274,21 +275,21 @@ class Client (var token : String) {
 
     private suspend fun resume() {
         logger.info("resuming")
-        if (status != State.Disconnected) return
-        webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME)).get("url").asString)
-        webSocketClient!!.connectBlocking()
-        webSocketClient!!.send("{\"s\":4,\"sn\":$lastSn}")
-        delay(6000)
-        if (webSocketClient?.isOpen != true) {
-            logger.info("resume failed.")
-            resumeTimes++
-            if (resumeTimes == 2) {
-                connect()
-            }
-            else{
-                resume()
+        for (i in listOf(1, 2)) {
+            try {
+                if (status != State.Disconnected) return
+                webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME)).get("url").asString)
+                webSocketClient!!.connectBlocking()
+                webSocketClient!!.send("{\"s\":4,\"sn\":$lastSn}")
+                delay(6000)
+                if (webSocketClient?.isOpen == true) {
+                    return
+                }
+            } catch (e: Exception) {
+                logger.info("resume failed, retry: $i.", e)
             }
         }
+        reconnect()
     }
 
     private fun initWebsocket(url: String): WebSocketClient {
@@ -369,8 +370,8 @@ class Client (var token : String) {
         sessionId = ""
         lastSn = -1
         self = null
+        GlobalScope.coroutineContext.cancel()
         GlobalScope.launch {
-            delay(10000)
             this@Client.connect()
         }
     }
