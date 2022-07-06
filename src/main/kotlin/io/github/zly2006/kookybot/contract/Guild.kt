@@ -128,6 +128,61 @@ class Guild(
                 }.toList()
         }
     }
+    fun createTextChannel(name: String, category: Category? = null): TextChannel{
+        val json = with(client) {
+            sendRequest(requestBuilder(Client.RequestType.CREATE_CHANNEL,
+                "guild_id" to id,
+                "name" to name,
+                "parent_id" to category?.id,
+            ))
+        }
+        val channel = TextChannel(
+            client = client,
+            id = json.get("id").asString,
+            guild = this
+        )
+        channel.update()
+        (channels as MutableList).add(channel)
+        category?.children?.add(channel)
+        return channel
+    }
+    fun createVoiceChannel(name: String, category: Category? = null): VoiceChannel{
+        val json = with(client) {
+            sendRequest(requestBuilder(Client.RequestType.CREATE_CHANNEL,
+                "guild_id" to id,
+                "name" to name,
+                "parent_id" to category?.id,
+                "type" to 2
+            ))
+        }
+        val channel = VoiceChannel(
+            client = client,
+            id = json.get("id").asString,
+            guild = this
+        )
+        channel.update()
+        (channels as MutableList).add(channel)
+        category?.children?.add(channel)
+        return channel
+    }
+    fun createCategory(name: String): Category{
+        val json = with(client) {
+            sendRequest(requestBuilder(Client.RequestType.CREATE_CHANNEL,
+                "guild_id" to id,
+                "name" to name,
+                "is_category" to 1
+            ))
+        }
+        val category = Category(
+            client = client,
+            id = json.get("id").asString,
+            guild = this,
+            name = name
+        )
+        category.update()
+        (categories as MutableList).add(category)
+        return category
+    }
     init {
         update()
     }

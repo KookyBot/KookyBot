@@ -18,9 +18,13 @@ package io.github.zly2006.kookybot.events
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.arguments.StringArgumentType
+import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
+import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.commands.Command
-import io.github.zly2006.kookybot.commands.CommandSource
+import io.github.zly2006.kookybot.commands.CommandContext
 import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.events.channel.ChannelCancelReactionEvent
 import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
@@ -32,8 +36,9 @@ import io.github.zly2006.kookybot.utils.Emoji
 import kotlin.reflect.KClass
 import io.github.zly2006.kookybot.events.Listener as Listener1
 
-class SingleEventHandler<T> (
-    var handler: (T) -> Unit
+
+class SingleEventHandler<T>(
+    var handler: (T) -> Unit,
 ) {
     @Suppress("UNCHECKED_CAST")
     fun handle(event: Event) {
@@ -43,13 +48,33 @@ class SingleEventHandler<T> (
 
 
 class EventManager(
-    private val client: Client
+    private val client: Client,
 ) {
+    val dispatcher = CommandDispatcher<CommandContext>()
     val listeners: MutableMap<KClass<out Event>, MutableList<SingleEventHandler<*>>> = mutableMapOf()
     val classListeners: MutableList<Listener1> = mutableListOf()
     val commands: MutableList<Command> = mutableListOf()
     // 用于click处理
     val clickEvents: MutableList<Pair<String, (CardButtonClickEvent) -> Unit>> = mutableListOf()
+
+    init {
+        dispatcher.register(literal<CommandContext?>("aaa")
+            .then(argument<CommandContext?, String?>("arg", StringArgumentType.word())
+                .executes{
+                    0
+                }
+            ))
+        commands.add(object : Command("help") {
+            override fun onExecute(context: CommandContext) {
+                if (context.channel != null) {
+                    context.channel.sendMessage("命令列表:\n" + commands.joinToString (separator = "\n"){ "${it.name} - ${it.description}" })
+                }
+                else {
+                    context.user.talkTo().sendMessage("命令列表:\n" + commands.joinToString (separator = "\n"){ "${it.name} - ${it.description}" })
+                }
+            }
+        })
+    }
 
     fun parseCommand(event: MessageEvent) {
         if (!event.content.startsWith('/')) return
@@ -80,14 +105,14 @@ class EventManager(
             }
         }
         val source  = when (event) {
-            is DirectMessageEvent -> CommandSource(
+            is DirectMessageEvent -> CommandContext(
                 user = event.sender,
                 label = args[0],
                 args = if (args.size == 1) arrayOf<String>() else args.subList(1, args.size).toTypedArray(),
                 command = command,
                 channel = null
             )
-            is ChannelMessageEvent -> CommandSource(
+            is ChannelMessageEvent -> CommandContext(
                 user = event.sender,
                 label = args[0],
                 args = if (args.size == 1) arrayOf<String>() else args.subList(1, args.size).toTypedArray(),
@@ -96,13 +121,14 @@ class EventManager(
             )
             else -> throw Exception()
         }
+        //dispatcher.execute(event.content.substring(1 until event.content.length), source)
         try {
             command.onExecute(source)
         }
         catch (e: Exception) {
             when (event) {
-                is DirectMessageEvent -> event.sender.sendMessage("执行命令时发生了错误，请联系开发者")
-                is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)执行命令时发生了错误，请联系开发者")
+                is DirectMessageEvent -> event.sender.sendMessage("执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
+                is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
             }
             e.printStackTrace()
         }
@@ -163,33 +189,34 @@ class EventManager(
             return
         }
         if (event.eventType == MessageEvent.EventType.SYSTEM) {
-            when (json.get("extra").asJsonObject.get("type").asString) {
+            event.extra.get("body").asJsonObject.addProperty("type", event.extra.get("type").asString)
+            event.extra = event.extra.get("body").asJsonObject
+            when (event.extra.get("type").asString) {
                 "added_reaction" -> {
                     val channelPostReactionEvent = Gson().fromJson(json, ChannelPostReactionEvent::class.java)
-                    channelPostReactionEvent.channel = client.self!!.getChannel(json.get("extra").asJsonObject.get("channel_id").asString)!! as TextChannel
+                    channelPostReactionEvent.channel = client.self!!.getChannel(event.extra.get("channel_id").asString)!! as TextChannel
                     channelPostReactionEvent.emoji = Emoji(
-                        json.get("extra").asJsonObject.get("emoji").asJsonObject.get("id").asString,
-                        json.get("extra").asJsonObject.get("emoji").asJsonObject.get("name").asString
+                        event.extra.get("emoji").asJsonObject.get("id").asString,
+                        event.extra.get("emoji").asJsonObject.get("name").asString
                     )
                     channelPostReactionEvent.guild = channelPostReactionEvent.channel.guild
-                    channelPostReactionEvent.sender = client.self!!.getGuildUser(json.get("extra").asJsonObject.get("user_id").asString, channelPostReactionEvent.guild.id)!!
-                    channelPostReactionEvent.targetId = json.get("extra").asJsonObject.get("msg_id").asString
+                    channelPostReactionEvent.sender = client.self!!.getGuildUser(event.extra.get("user_id").asString, channelPostReactionEvent.guild.id)!!
+                    channelPostReactionEvent.targetId = event.extra.get("msg_id").asString
                     callEvent(channelPostReactionEvent)
                 }
                 "deleted_reaction" -> {
                     val channelCancelReactionEvent = Gson().fromJson(json, ChannelCancelReactionEvent::class.java)
-                    channelCancelReactionEvent.channel = client.self!!.getChannel(json.get("extra").asJsonObject.get("channel_id").asString)!! as TextChannel
+                    channelCancelReactionEvent.channel = client.self!!.getChannel(event.extra.get("channel_id").asString)!! as TextChannel
                     channelCancelReactionEvent.emoji = Emoji(
-                        json.get("extra").asJsonObject.get("emoji").asJsonObject.get("id").asString,
-                        json.get("extra").asJsonObject.get("emoji").asJsonObject.get("name").asString
+                        event.extra.get("emoji").asJsonObject.get("id").asString,
+                        event.extra.get("emoji").asJsonObject.get("name").asString
                     )
                     channelCancelReactionEvent.guild = channelCancelReactionEvent.channel.guild
-                    channelCancelReactionEvent.sender = client.self!!.getGuildUser(json.get("extra").asJsonObject.get("user_id").asString, channelCancelReactionEvent.guild.id)!!
-                    channelCancelReactionEvent.targetId = json.get("extra").asJsonObject.get("msg_id").asString
+                    channelCancelReactionEvent.sender = client.self!!.getGuildUser(event.extra.get("user_id").asString, channelCancelReactionEvent.guild.id)!!
+                    channelCancelReactionEvent.targetId = event.extra.get("msg_id").asString
                     callEvent(channelCancelReactionEvent)
                 }
                 "message_btn_click" -> {
-                    event.extra = event.extra.get("body").asJsonObject
                     val cardButtonClickEvent = Gson().fromJson(json, CardButtonClickEvent::class.java)
                     cardButtonClickEvent.channel = client.self!!.getChannel(event.extra.get("target_id").asString) as TextChannel
                     cardButtonClickEvent.sender = client.self!!.getUser(event.extra.get("user_id").asString)

@@ -2,9 +2,10 @@ package io.github.zly2006.kookybot.test.api
 
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.commands.Command
-import io.github.zly2006.kookybot.commands.CommandSource
+import io.github.zly2006.kookybot.commands.CommandContext
 import io.github.zly2006.kookybot.contract.PrivateChatUser
 import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
+import io.github.zly2006.kookybot.message.CardMessage
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.*
@@ -22,8 +23,6 @@ suspend fun main() {
                 Card {
                     HeaderModule(PlainTextElement("Hello"))
                     Divider()
-                }
-                Card {
                     SectionModule(
                         text = MarkdownElement("**Click Me!**"),
                         accessory = ButtonElement(
@@ -34,6 +33,16 @@ suspend fun main() {
                             })
                     )
                 }
+                Card {
+                    SectionModule(
+                        text = MarkdownElement("**执行命令测试**"),
+                        accessory = ButtonElement(
+                            text = PlainTextElement("run"),
+                            value = "/echo hello",
+                            click = CardMessage.ClickType.ExecuteCommand
+                        )
+                    )
+                }
             }
         }
     }
@@ -41,33 +50,33 @@ suspend fun main() {
         name = "echo",
         alias = listOf("test_echo")
     ) {
-        override fun onExecute(source: CommandSource) {
-            if (source.channel != null) {
-                source.channel!!.sendMessage(source.args[0])
+        override fun onExecute(context: CommandContext) {
+            if (context.channel != null) {
+                context.channel!!.sendMessage(context.args[0])
             }
             else {
-                (source.user as PrivateChatUser).sendMessage(source.args[0])
+                (context.user as PrivateChatUser).sendMessage(context.args[0])
             }
         }
     })
     client.eventManager.commands.add(object : Command("stop", ) {
-        override fun onExecute(source: CommandSource) {
+        override fun onExecute(context: CommandContext) {
             client.close()
             throw Error("stopped")
         }
     })
     client.eventManager.addCommand(object : Command("lottery") {
-        override fun onExecute(source: CommandSource) {
-            if (source.channel == null) return
+        override fun onExecute(context: CommandContext) {
+            if (context.channel == null) return
             val list: MutableList<String> = mutableListOf()
-            val num = source.args[2].toInt()
-            source.channel!!.sendCardMessage {
+            val num = context.args[2].toInt()
+            context.channel!!.sendCardMessage {
                 Card {
-                    HeaderModule(PlainTextElement(source.args[0]))
+                    HeaderModule(PlainTextElement(context.args[0]))
                     CountdownModule(
                         mode = "hour",
-                        startTime = Calendar.getInstance().timeInMillis+1000,
-                        endTime = Calendar.getInstance().timeInMillis+(source.args[1].toLong()*1000)+1000,
+                        startTime = Calendar.getInstance().timeInMillis + 1000,
+                        endTime = Calendar.getInstance().timeInMillis + (context.args[1].toLong() * 1000) + 1000,
                     )
                     SectionModule(
                         PlainTextElement("点击右侧按钮参与抽奖"),
@@ -77,14 +86,13 @@ suspend fun main() {
                                 if (!list.contains(it.sender.id)) {
                                     it.channel!!.sendMessage(
                                         "参与成功",
-                                        it.sender.atGuild(source.channel!!.guild)
+                                        it.sender.atGuild(context.channel!!.guild)
                                     )
                                     list.add(it.sender.id)
-                                }
-                                else {
+                                } else {
                                     it.channel!!.sendMessage(
                                         "你已经参与过了",
-                                        it.sender.atGuild(source.channel!!.guild)
+                                        it.sender.atGuild(context.channel!!.guild)
                                     )
                                 }
                             })
@@ -92,7 +100,7 @@ suspend fun main() {
                 }
             }
             Thread {
-                Thread.sleep(source.args[1].toLong()*1000+1000)
+                Thread.sleep(context.args[1].toLong() * 1000 + 1000)
                 val winners: MutableList<String> = mutableListOf()
                 for (ignored in (0 until num)) {
                     if (list.isNotEmpty()) {
@@ -101,15 +109,23 @@ suspend fun main() {
                         list.removeAll(listOf(id))
                     }
                 }
-                source.channel!!.sendMessage(
-                    "恭喜以下参与者获得 **${source.args[0]}**：" +
+                context.channel!!.sendMessage(
+                    "恭喜以下参与者获得 **${context.args[0]}**：" +
                             winners.joinToString {
                                 "(met)$it(met)"
                             }
                 )
             }.start()
         }
-
+    })
+    client.eventManager.commands.add(object : Command("test") {
+        override fun onExecute(context: CommandContext) {
+            when (context.args[0]) {
+                "add_channel" -> {
+                    context.channel!!.sendMessage(context.channel!!.guild.createTextChannel(context.args[1]).id)
+                }
+            }
+        }
     })
     while (true) {
         var cmd = readln()

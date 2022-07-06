@@ -70,4 +70,5 @@ open class User(
     fun atGuild(guild: Guild): GuildUser? {
         return client.self!!.getGuildUser(id, guild.id)
     }
+    val fullName get() = "$name#$identifyNumber"
 }

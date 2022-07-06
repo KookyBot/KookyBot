@@ -16,6 +16,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.zly2006.kookybot.contract
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.utils.Updatable
 
@@ -25,10 +27,15 @@ class Category (
     val id: String,
     @field:Transient
     val guild: Guild,
+    var name: String = "",
 ): Updatable {
     @field:Transient
     val children: MutableList<Channel> = mutableListOf()
     override fun update() {
-        TODO("Not yet implemented")
+        with(client) {
+            val channel = Gson().fromJson(sendRequest(requestBuilder(Client.RequestType.VIEW_CHANNEL,
+                mapOf("channel_id" to id))), JsonObject::class.java)
+            updateByJson(channel)
+        }
     }
 }

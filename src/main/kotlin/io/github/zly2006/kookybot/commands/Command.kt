@@ -6,5 +6,5 @@ abstract class Command(
     val permission: String? = null,
     val description: String? = null
 ) {
-    abstract fun onExecute(source: CommandSource)
+    abstract fun onExecute(context: CommandContext)
 }

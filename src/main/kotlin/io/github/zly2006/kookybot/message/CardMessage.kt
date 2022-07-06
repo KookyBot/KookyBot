@@ -24,6 +24,8 @@ import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.events.CardButtonClickEvent
+import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
+import io.github.zly2006.kookybot.events.direct.DirectMessageEvent
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -40,7 +42,7 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
         Left, Right
     }
     enum class ClickType{
-        None,ReturnValue,Link
+        None,ReturnValue,Link,ExecuteCommand
     }
     abstract class CardComponent {
         abstract fun toJson(): JsonElement
@@ -83,6 +85,12 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
                 }
             }
         }
+
+        /**
+         * ExecuteCommand onclick是我独家实现的语法躺
+         *
+         * onclick优先级高于execute command
+         */
         fun ButtonElement(
             theme: Theme = Theme.Primary,
             value: String = "",
@@ -96,6 +104,40 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
                 client.eventManager.clickEvents.add(id to onclick)
                 clickType = ClickType.ReturnValue
             }
+            // 重名变量杀了我吧
+            else if (clickType == ClickType.ExecuteCommand) {
+                client.eventManager.addListener<CardButtonClickEvent> {
+                    if (id == this.value) {
+                        val event = if (channel != null) {
+                            ChannelMessageEvent(
+                                _type = 9,
+                                _channelType = "GROUP",
+                                authorId = sender.id,
+                                channel = channel!!,
+                                content = value,
+                                guild = channel!!.guild,
+                                targetId = channel!!.id,
+                                sid = "offered by KookyBot",
+                                sender = sender.atGuild(channel!!.guild)!!,
+                                timestamp = "offered by KookyBot"
+                            )
+                        }
+                        else {
+                            DirectMessageEvent(
+                                _type = 9,
+                                _channelType = "GROUP",
+                                authorId = sender.id,
+                                content = value,
+                                targetId = sender.id,
+                                sid = "offered by KookyBot",
+                                sender = sender.talkTo(),
+                                timestamp = "offered by KookyBot"
+                            )
+                        }
+                        client.eventManager.parseCommand(event)
+                    }
+                }
+            }
             return object : CardComponent() {
                 override fun toJson(): JsonElement {
                     val obj = JsonObject()
@@ -105,7 +147,7 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
                     obj.addProperty("click", when (clickType) {
                         ClickType.None -> ""
                         ClickType.Link -> "link"
-                        ClickType.ReturnValue -> "return-val"
+                        ClickType.ReturnValue,ClickType.ExecuteCommand -> "return-val"
                     })
                     obj.add("text", text.toJson())
                     return obj

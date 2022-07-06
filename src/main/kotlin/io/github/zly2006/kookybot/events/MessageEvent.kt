@@ -18,6 +18,8 @@ package io.github.zly2006.kookybot.events
 
 import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
+import io.github.zly2006.kookybot.events.self.SelfReactionEvent
+import io.github.zly2006.kookybot.utils.Emoji
 
 open class MessageEvent(
     @field:SerializedName("channel_type")
@@ -27,11 +29,17 @@ open class MessageEvent(
     @field:SerializedName("target_id")
     var targetId: String,
     @field:SerializedName("author_id")
+    /**
+     * 非必要不建议使用，需要请issue
+     */
     var authorId: String,
     @field:SerializedName("content")
+    /**
+     * 非必要不建议使用，需要请issue
+     */
     var content: String,
     @field:SerializedName("message_id")
-    var sid: String,
+    var messageId: String,
     @field:SerializedName("msg_timestamp")
     var timestamp: String,
     var extra: JsonObject = JsonObject()
@@ -69,5 +77,8 @@ open class MessageEvent(
         "BROADCAST" -> ChannelType.BROADCAST
         "PERSON" -> ChannelType.PERSON
         else -> ChannelType.UNKNOWN
+    }
+    fun postReaction(emoji: Emoji): SelfReactionEvent {
+        TODO()
     }
 }

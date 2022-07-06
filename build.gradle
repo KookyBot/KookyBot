@@ -30,7 +30,7 @@ dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-reflect:1.7.0'
     testImplementation 'org.slf4j:slf4j-simple:1.7.11'
     implementation 'org.yaml:snakeyaml:1.30'
-    //implementation 'com.mojang:brigadier:1.0.18'
+    implementation 'com.mojang:brigadier:1.0.18'
     implementation 'org.jvoicexml:org.jlibrtp:0.2'
 }
 

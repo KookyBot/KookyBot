@@ -67,6 +67,13 @@ enum class PingState {
     Timeout,
 }
 
+enum class ResumeStatus {
+    None,
+    First,
+    Second,
+    Reconnect,
+}
+
 class Client (var token : String) {
     private val logger = LoggerFactory.getLogger(Client::class.java)
     private val context: CoroutineContext = EmptyCoroutineContext
@@ -74,6 +81,7 @@ class Client (var token : String) {
     private var lastSn = 0
     private var sessionId = ""
     private var resumeTimes = 0
+    var resumeStatus: ResumeStatus = ResumeStatus.None
     var voiceWebSocketClient: WebSocketClient? = null
     var pingDelay = 0L
     var status = State.Initialized
@@ -86,14 +94,18 @@ class Client (var token : String) {
     private var updateJob: Job? = null
 
     private var pingStart = Calendar.getInstance().timeInMillis
-    private var pingJob: Job = GlobalScope.launch {
-        while (status != State.FatalError) {
+    private var pingThread = Thread {
+        while (status != State.FatalError &&
+                status != State.Closed) {
             try {
-                delay(30000)
+                Thread.sleep(30000)
                 ping()
             } catch (_: Exception) {
             }
         }
+    }
+    init {
+        pingThread.start()
     }
 
     /**
@@ -141,9 +153,11 @@ class Client (var token : String) {
         GUILD_USER_LIST,
         VOICE_GATEWAY,
         OFFLINE,
+        CREATE_CHANNEL,
+
     }
 
-    private suspend fun ping() {
+    private fun ping() {
         logger.debug("ping")
         pingStatus = PingState.Pinging
         webSocketClient?.send("{\"s\":2,\"sn\":$lastSn}")
@@ -152,6 +166,7 @@ class Client (var token : String) {
             delay(6000)
             if (pingStatus == PingState.Pinging) {
                 pingStatus = PingState.Timeout
+                if (status == State.Closed) return@launch
                 status = State.Disconnected
                 resume()
             }
@@ -228,6 +243,9 @@ class Client (var token : String) {
             OFFLINE -> builder.uri(apiOf("/user/offline"))
                 .header("content-type", "application/json")
                 .POST(postAll(mapOf()))
+            CREATE_CHANNEL -> builder.uri(apiOf("/channel/create"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
         }
         return builder.build()
     }
@@ -237,7 +255,16 @@ class Client (var token : String) {
         val json = Gson().fromJson(response.body(), JsonObject::class.java)
         when (json.get("code").asInt) {
             0 -> {
-                return json.get("data").asJsonObject
+                return try{
+                    json.get("data").asJsonObject
+                }
+                catch (e: Exception) {
+                    if (json.get("data").asJsonArray.isEmpty)
+                        JsonObject()
+                    else
+                        throw e
+                    // 官方bug，特殊处理
+                }
             }
             else -> {
                 throw KookRemoteException(json.get("code").asInt, json.get("message").asString, request)
@@ -323,7 +350,7 @@ class Client (var token : String) {
             }
 
             override fun onClose(code: Int, reason: String, remote: Boolean) {
-                logger.info("websocket closed")
+                logger.info("websocket closed, code=$code, reason=$reason")
                 if (status == State.Closed) return
                 status = State.Disconnected
                 GlobalScope.launch {
@@ -490,7 +517,9 @@ class Client (var token : String) {
         sendRequest(requestBuilder(OFFLINE))
         status = State.Closed
         webSocketClient?.closeBlocking()
-        pingJob.cancel()
+        pingThread.interrupt()
         updateJob?.cancel()
     }
+
+
 }

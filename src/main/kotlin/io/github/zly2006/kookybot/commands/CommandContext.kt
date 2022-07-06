@@ -19,11 +19,35 @@ package io.github.zly2006.kookybot.commands
 import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.contract.User
 
-data class CommandSource(
+data class CommandContext(
     val user: User,
     val channel: TextChannel? = null,
     val label: String,
     val command: Command,
     val args: Array<String>
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as CommandContext
+
+        if (user != other.user) return false
+        if (channel != other.channel) return false
+        if (label != other.label) return false
+        if (command != other.command) return false
+        if (!args.contentEquals(other.args)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = user.hashCode()
+        result = 31 * result + (channel?.hashCode() ?: 0)
+        result = 31 * result + label.hashCode()
+        result = 31 * result + command.hashCode()
+        result = 31 * result + args.contentHashCode()
+        return result
+    }
+}
 
