@@ -4,6 +4,12 @@
 
 JVM 平台上的 KOOK (原开黑啦) Bot SDK
 
+## 开发计划
+
+- [ ] 完整缓存模型
+- [ ] 缓存模型自动更新
+- [ ] 登录状态机稳定的自动重连
+
 ## Quick Starting
 
 1. 在 [Releases](https://github.com/zly2006/KookyBot/releases) 下载下载最新版jar或clone本仓库并运行`gradle jar`
@@ -86,7 +92,7 @@ public class JavaApiTest extends JavaBaseClass {
 
 ## 文档
 
-[Docs](docs/index.md)
+[Docs](docs/zh-cn/index.md)
 
 还在做，不要急的啦
 
@@ -98,7 +104,7 @@ public class JavaApiTest extends JavaBaseClass {
 
 优秀的衍生项目可以再次得到展示！欢迎把你的项目提交给我。
 
-# [KookyGithub](https://github.com/zly2006/KookyGithub) - 将GithubWebhook的信息同步到Kook
+[KookyGithub](https://github.com/zly2006/KookyGithub) - 将GithubWebhook的信息同步到Kook
 
 ## 联系我
 

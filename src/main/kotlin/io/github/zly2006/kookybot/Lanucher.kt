@@ -46,8 +46,7 @@ val launcher = object : Lanucher {
         }
     }
 
-    override val plugins: MutableList<Plugin>
-        get() = TODO("Not yet implemented")
+    override val plugins: MutableList<Plugin> = mutableListOf()
 }
 
 suspend fun main() {

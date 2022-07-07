@@ -14,18 +14,17 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package io.github.zly2006.kookybot.commands
+package io.github.zly2006.kookybot.message
 
-interface CommandComponent {
-    fun build(): Command
-}
+import io.github.zly2006.kookybot.client.Client
+import java.io.File
 
-fun buildCommand(content: CommandComponent.() -> Unit): Command {
-    val component = object : CommandComponent {
-        override fun build(): Command {
-            TODO("Not yet implemented")
-        }
+class FileMessage(client: Client, quote: String? = null, src: String? = null, file: File? = null) : Message(client, quote) {
+    override val type: Int = 4
+
+    override fun content(): String {
+        return source;
     }
-    component.content()
-    return component.build()
+
+    private val source = (src ?: client.sendRequest(client.requestBuilder(Client.RequestType.CREATE_ASSET,"file" to file!!.readBytes())).get("url").asString)!!
 }

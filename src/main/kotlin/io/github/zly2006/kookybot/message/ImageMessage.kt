@@ -14,10 +14,17 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package io.github.zly2006.kookybot
+package io.github.zly2006.kookybot.message
 
-object data {
-    val baseUrl = "https://www.kookapp.cn"
-    val baseApiUrl = "https://www.kookapp.cn/api/v3"
-    val version = "0.1"
+import io.github.zly2006.kookybot.client.Client
+import java.io.File
+
+class ImageMessage(client: Client, quote: String? = null, src: String? = null, file: File? = null) : Message(client, quote) {
+    override val type: Int = 2
+
+    override fun content(): String {
+        return source;
+    }
+
+    private val source = (src ?: client.sendRequest(client.requestBuilder(Client.RequestType.CREATE_ASSET,"file" to file!!.readBytes())).get("url").asString)!!
 }

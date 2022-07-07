@@ -1,16 +1,17 @@
 package io.github.zly2006.kookybot.events.direct
 
 import io.github.zly2006.kookybot.contract.PrivateChatUser
-import io.github.zly2006.kookybot.events.MessageEvent
+import io.github.zly2006.kookybot.utils.Emoji
 
-open class DirectMessageEvent (
+class DirectCancelReactionEvent (
     @field:Transient
-    var sender: PrivateChatUser,
+    var emoji: Emoji,
+    sender: PrivateChatUser,
     _channelType: String,
     _type: Int,
     targetId: String,
     authorId: String,
     content: String,
     sid: String,
-    timestamp: String
-): MessageEvent(_channelType, _type, targetId, authorId, content, sid, timestamp)
+    timestamp: String,
+): DirectMessageEvent(sender, _channelType, _type, targetId, authorId, content, sid, timestamp)

@@ -63,10 +63,10 @@ class SelfMessage(
     /**
      * 这会更改message的值，建议构造一次性message
      */
-    // TODO: message 的深拷贝
     fun reply(message: Message) {
-        message.quote = id
-        target.sendMessage(message)
+        val msg = message.copy()
+        msg.quote = id
+        target.sendMessage(msg)
     }
 
     fun reply(message: String) {

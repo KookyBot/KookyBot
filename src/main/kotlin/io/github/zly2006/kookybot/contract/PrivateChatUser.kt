@@ -54,9 +54,12 @@ class PrivateChatUser(
     vipAvatarUrl,
     isVip), Updatable {
     override fun update() {
-        updateByJson(with(client) {
+        val json = with(client) {
             sendRequest(requestBuilder(Client.RequestType.USER_CHAT_VIEW, "chat_code" to code))
-            //TODO: id
+        }
+        updateByJson(json)
+        updateByJson(with(client) {
+            sendRequest(requestBuilder(Client.RequestType.USER_VIEW, "user_id" to json["target_info"].asJsonObject["id"].asString))
         })
     }
     fun sendMessage(message: String, quote: String? = null) {

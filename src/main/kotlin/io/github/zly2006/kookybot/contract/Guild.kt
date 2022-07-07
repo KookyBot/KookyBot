@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 package io.github.zly2006.kookybot.contract
 
 import com.google.gson.Gson
+import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.client.State
@@ -62,12 +63,42 @@ class Guild(
     @field:Transient
     var categories: List<Category> = listOf()
     @field:DontUpdate
-    var users: List<GuildUser> = listOf()
+    var users: Lazy<List<GuildUser>> = lazy {
+        client.sendRequest(client.requestBuilder(Client.RequestType.GUILD_USER_LIST, "guild_id" to id))
+            .get("items").asJsonArray.map { it.asJsonObject.get("id").asString }.map {
+                val user = GuildUser(client, it, this@Guild)
+                user.update()
+                return@map user
+            }.toList()
+    }
     @field:DontUpdate
     var roleMap: Map<Int, GuildRole> = mapOf()
 
     val owner: User get() = client.getUser(masterId)
     val botPermission: Permission = PermissionImpl.Permissions.None
+
+    override fun updateByJson(jsonElement: JsonElement) {
+        super.updateByJson(jsonElement)
+        if (!jsonElement.asJsonObject.get("enable_open").asBoolean)
+            openId = null
+        channels = channels + jsonElement.asJsonObject.get("channels")
+            .asJsonArray
+            .map { it.asJsonObject }
+            .filter { !it.get("is_category").asBoolean }
+            .filter { channels.map { it.id }.contains(it.get("id").asString) }
+            .map {
+            val id = it.get("id").asString
+            val channel = when (it.get("type").asInt) {
+                1 -> TextChannel(client, id, this@Guild)
+                2 -> VoiceChannel(client, id, this@Guild)
+                else -> throw Exception("Invalid channel type.")
+            }
+            channel.update()
+            return@map channel
+        }
+        defaultChannel = channels.firstOrNull { it.id == jsonElement.asJsonObject.get("default_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
+        welcomeChannel = channels.firstOrNull { it.id == jsonElement.asJsonObject.get("welcome_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
+    }
 
     override fun update() {
         with(client) {
@@ -76,22 +107,6 @@ class Guild(
                 mapOf("guild_id" to id)))
 
             updateByJson(g)
-            if (!g.get("enable_open").asBoolean)
-                openId = null
-
-            channels = g.get("channels").asJsonArray.map { it.asJsonObject }.filter { !it.get("is_category").asBoolean }.map {
-                val id = it.get("id").asString
-                val channel = when (it.get("type").asInt) {
-                    1 -> TextChannel(client, id, this@Guild)
-                    2 -> VoiceChannel(client, id, this@Guild)
-                    else -> TODO()
-                }
-                channel.update()
-                return@map channel
-            }
-            defaultChannel = channels.firstOrNull { it.id == g.asJsonObject.get("default_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
-            welcomeChannel = channels.firstOrNull { it.id == g.asJsonObject.get("welcome_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
-
 
             // bot permission
 
@@ -115,17 +130,9 @@ class Guild(
                         }
                     }
                 } catch (e: Exception) {
-                    // TODO:
-                    // 等待官方
+                    // TODO: 判定权限，等以后吧
                 }
             }
-            // users
-            users = sendRequest(requestBuilder(Client.RequestType.GUILD_USER_LIST, "guild_id" to id))
-                .get("items").asJsonArray.map { it.asJsonObject.get("id").asString }.map {
-                    val user = GuildUser(client, it, this@Guild)
-                    user.update()
-                    return@map user
-                }.toList()
         }
     }
     fun createTextChannel(name: String, category: Category? = null): TextChannel{
@@ -183,7 +190,7 @@ class Guild(
         (categories as MutableList).add(category)
         return category
     }
-    init {
-        update()
+    fun getGuildUser(userId: String): GuildUser? {
+        return client.self!!.getGuildUser(userId, id)
     }
 }

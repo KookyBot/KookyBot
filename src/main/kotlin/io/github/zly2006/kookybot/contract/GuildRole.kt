@@ -28,6 +28,9 @@ data class GuildRole (
     var permissions: Int,
 ): Updatable {
     override fun update() {
-        TODO("Not yet implemented")
+        // check guild perm
+        // send request: view
+        // update
+        //TODO
     }
 }

@@ -24,11 +24,14 @@ import io.github.zly2006.kookybot.commands.Command
 import io.github.zly2006.kookybot.commands.CommandContext
 import io.github.zly2006.kookybot.commands.RequireChannel
 import io.github.zly2006.kookybot.commands.RequireGuild
+import io.github.zly2006.kookybot.contract.Guild
 import io.github.zly2006.kookybot.contract.TextChannel
-import io.github.zly2006.kookybot.events.channel.ChannelCancelReactionEvent
-import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
-import io.github.zly2006.kookybot.events.channel.ChannelPostReactionEvent
+import io.github.zly2006.kookybot.events.channel.*
+import io.github.zly2006.kookybot.events.direct.DirectCancelReactionEvent
 import io.github.zly2006.kookybot.events.direct.DirectMessageEvent
+import io.github.zly2006.kookybot.events.direct.DirectPostReactionEvent
+import io.github.zly2006.kookybot.events.guild.GuildDeleteEvent
+import io.github.zly2006.kookybot.events.guild.GuildUpdateEvent
 import io.github.zly2006.kookybot.events.self.SelfMessageEvent
 import io.github.zly2006.kookybot.message.SelfMessage
 import io.github.zly2006.kookybot.utils.Emoji
@@ -38,10 +41,16 @@ import io.github.zly2006.kookybot.events.Listener as Listener1
 
 class SingleEventHandler<T>(
     var handler: (T) -> Unit,
+    private val eventManager: EventManager
 ) {
     @Suppress("UNCHECKED_CAST")
     fun handle(event: Event) {
         handler(event as T)
+    }
+    fun cancel() {
+        for (handlers in eventManager.listeners.values) {
+            handlers.remove(this)
+        }
     }
 }
 
@@ -116,23 +125,30 @@ class EventManager(
         }
         //dispatcher.execute(event.content.substring(1 until event.content.length), source)
         try {
+            var invoke = true
             for (annotation in command.javaClass.getMethod("onExecute", CommandContext::class.java).annotations) {
                 if (annotation is RequireGuild) {
+                    invoke = false
                     if (event is ChannelMessageEvent) {
-                        if (event.guild.id != annotation.id) {
-                            return
+                        if (event.guild.id == annotation.id) {
+                            invoke = true
+                            break
                         }
                     }
                 }
                 if (annotation is RequireChannel) {
+                    invoke = false
                     if (event is ChannelMessageEvent) {
                         if (event.channel.id != annotation.id) {
-                            return
+                            invoke = true
+                            break
                         }
                     }
                 }
             }
-            command.onExecute(source)
+            if (invoke) {
+                command.onExecute(source)
+            }
         }
         catch (e: Exception) {
             when (event) {
@@ -190,7 +206,7 @@ class EventManager(
                             }
                         }.firstOrNull { it != null }!!
                         MessageEvent.ChannelType.PERSON -> client.self!!.chattingUsers.firstOrNull { it.id == json.get("target_id").asString }!!
-                        else -> TODO()
+                        else -> throw Exception("Invalid channel type.")
                     } as TextChannel,
                     content = json.get("content").asString
                 )))
@@ -233,6 +249,54 @@ class EventManager(
                     cardButtonClickEvent.value = event.extra.get("value").asString
                     callEvent(cardButtonClickEvent)
                 }
+                "private_added_reaction" -> {
+                    val directPostReactionEvent = Gson().fromJson(json, DirectPostReactionEvent::class.java)
+                    directPostReactionEvent.sender = client.self!!.chattingUsers.find { it.code == event.extra.get("chat_code").asString }!!
+                    directPostReactionEvent.sender.update()
+                    directPostReactionEvent.emoji = Emoji(
+                        event.extra.get("emoji").asJsonObject.get("id").asString,
+                        event.extra.get("emoji").asJsonObject.get("name").asString
+                    )
+                    callEvent(directPostReactionEvent)
+                }
+                "private_deleted_reaction" -> {
+                    val directCancelReactionEvent = Gson().fromJson(json, DirectCancelReactionEvent::class.java)
+                    directCancelReactionEvent.sender = client.self!!.chattingUsers.find { it.code == event.extra.get("chat_code").asString }!!
+                    directCancelReactionEvent.sender.update()
+                    directCancelReactionEvent.emoji = Emoji(
+                        event.extra.get("emoji").asJsonObject.get("id").asString,
+                        event.extra.get("emoji").asJsonObject.get("name").asString
+                    )
+                    callEvent(directCancelReactionEvent)
+                }
+                "updated_guild" -> {
+                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("id").asString }!!
+                    guild.updateByJson(event.extra)
+                    callEvent(GuildUpdateEvent(guild))
+                }
+                "deleted_guild" -> {
+                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("id").asString }!!
+                    (client.self!!.guilds as MutableList).removeIf { it.id == guild.id }
+                    callEvent(GuildDeleteEvent(guild))
+                }
+                "added_channel" -> {
+                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("guild_id").asString }!!
+                    guild.update()
+                    val channel = guild.channels.find { it.id == event.extra.get("id").asString }!!
+                    callEvent(ChannelAddedEvent(channel))
+                }
+                "updated_channel" -> {
+                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("guild_id").asString }!!
+                    guild.update()
+                    val channel = guild.channels.find { it.id == event.extra.get("id").asString }!!
+                    callEvent(ChannelUpdateEvent(channel))
+                }
+                "deleted_channel" -> {
+                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("guild_id").asString }!!
+                    val channel = guild.channels.find { it.id == event.extra.get("id").asString }!!
+                    guild.channels -= channel
+                    callEvent(ChannelDeletedEvent(channel))
+                }
             }
         }
         else if (event.channelType == MessageEvent.ChannelType.GROUP) {
@@ -257,14 +321,15 @@ class EventManager(
         }
     }
 
-    inline fun<reified T> addListener(noinline handler: T.() -> Unit) where T:Event{
-        val eventHandler = SingleEventHandler(handler)
+    inline fun<reified T> addListener(noinline handler: T.() -> Unit): SingleEventHandler<T> where T:Event{
+        val eventHandler = SingleEventHandler(handler, this)
         if (listeners.contains(T::class)) {
             listeners[T::class]!!.add(eventHandler)
         }
         else {
             listeners[T::class] = mutableListOf(eventHandler)
         }
+        return eventHandler
     }
 
     fun addClassListener(listener: Listener1) {

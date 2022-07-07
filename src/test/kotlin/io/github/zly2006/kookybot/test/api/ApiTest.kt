@@ -4,6 +4,7 @@ import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.commands.Command
 import io.github.zly2006.kookybot.commands.CommandContext
 import io.github.zly2006.kookybot.commands.RequireChannel
+import io.github.zly2006.kookybot.commands.RequireGuild
 import io.github.zly2006.kookybot.contract.PrivateChatUser
 import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
 import io.github.zly2006.kookybot.message.CardMessage
@@ -63,7 +64,7 @@ suspend fun main() {
     client.eventManager.commands.add(object : Command("stop", ) {
         override fun onExecute(context: CommandContext) {
             client.close()
-            throw Error("stopped")
+            Runtime.getRuntime().exit(0)
         }
     })
     client.eventManager.addCommand(object : Command("lottery") {
@@ -136,7 +137,6 @@ suspend fun main() {
             Card {
                 HeaderModule(PlainTextElement(context!!.args[0]))
                 for (i in (1 until context!!.args.size)) {
-                    val id = UUID.randomUUID().toString()
                     SectionModule(
                         text = MarkdownElement(context!!.args[i]),
                         accessory = ButtonElement(
@@ -156,18 +156,13 @@ suspend fun main() {
                         }
                     )
                     ContextModule {
-                        MarkdownElement(
-                            "> " +
-                                    (list[i].firstOrNull() ?: "") +
-                                    "等" +
-                                    list[i].size +
-                                    "人选择了此选项"
-                        )
+                        MarkdownElement("> ${list[i].firstOrNull()?.let { "(met)$it(met)" } ?: ""}等${list[i].size}人选择了此选项")
                     }
                 }
             }
         }
         @RequireChannel(id = "7118025577525135")
+        @RequireGuild(id = "9958078697384496")
         override fun onExecute(context: CommandContext) {
             list = (0 until  context.args.size).map { mutableListOf() }
             this.context = context
@@ -185,6 +180,9 @@ suspend fun main() {
         if (cmd == "stop") {
             client.close()
             return
+        }
+        if (cmd == "ping") {
+            client.ping()
         }
     }
 }

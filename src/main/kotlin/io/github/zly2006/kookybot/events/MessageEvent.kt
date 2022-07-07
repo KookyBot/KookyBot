@@ -81,4 +81,6 @@ open class MessageEvent(
     fun postReaction(emoji: Emoji): SelfReactionEvent {
         TODO()
     }
+    val reactions: Map<Emoji, Int>
+        get() = TODO()
 }

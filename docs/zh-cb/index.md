@@ -44,3 +44,6 @@ websocket链接会在ping超时后自动尝试重连，同时触发`SelfReLoginE
 
 通常情况下，我们推荐使用`User.sendCardMessage` & `Channel.sendCardMessage`来发送卡片消息，而不是新建一个CardMessage对象。
 
+### 独家特性
+
+[here](featires.md)

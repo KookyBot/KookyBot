@@ -157,7 +157,7 @@ class Client (var token : String) {
 
     }
 
-    private fun ping() {
+    fun ping() {
         logger.debug("ping")
         pingStatus = PingState.Pinging
         webSocketClient?.send("{\"s\":2,\"sn\":$lastSn}")
@@ -253,6 +253,7 @@ class Client (var token : String) {
 
     fun sendRequest(request: HttpRequest): JsonObject {
         val response = httpClient.send(request, BodyHandlers.ofString())
+        println(response.body())
         val json = Gson().fromJson(response.body(), JsonObject::class.java)
         when (json.get("code").asInt) {
             0 -> {
@@ -494,6 +495,7 @@ class Client (var token : String) {
     ): SelfMessage {
         if (self!!.chattingUsers.find { it.id == target.id } == null) {
             sendRequest(requestBuilder(CREATE_CHAT, "target_id" to target.id))
+            self!!.updatePrivateChatUser(target.id)
         }
         val ret = sendRequest(requestBuilder(SEND_PRIVATE_MESSAGE,
             "type" to type,
@@ -521,6 +523,4 @@ class Client (var token : String) {
         pingThread.interrupt()
         updateJob?.cancel()
     }
-
-
 }

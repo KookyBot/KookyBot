@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 package io.github.zly2006.kookybot.message
 
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.contract.TextChannel
 
 class MarkdownMessage(
     client: Client,
@@ -25,9 +24,6 @@ class MarkdownMessage(
 ) : Message(client) {
     override fun content(): String = this.content
     override val type: Int = 9
-    override fun send2Channel(channel: TextChannel) {
-        client.sendChannelMessage(target = channel, content = content())
-    }
     fun append(component: MessageComponent) {
         content += component.toMarkdown()
     }

@@ -19,6 +19,7 @@ package io.github.zly2006.kookybot.message
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.contract.MessageReceiver
 import io.github.zly2006.kookybot.contract.TextChannel
+import io.github.zly2006.kookybot.contract.User
 
 abstract class Message(
     protected val client: Client,
@@ -28,10 +29,32 @@ abstract class Message(
         return ""
     }
     abstract val type: Int
-    abstract fun send2Channel(channel: TextChannel)
+    open fun send2Channel(channel: TextChannel) {
+        client.sendChannelMessage(
+            target = channel,
+            type = type,
+            content = content()
+        )
+    }
     open fun send(messageReceiver: MessageReceiver) {
         if (messageReceiver is TextChannel) {
             send2Channel(messageReceiver)
         }
+    }
+    open fun copy(): Message{
+        return object : Message(client, quote) {
+            val content = this@Message.content()
+            override val type: Int = this@Message.type
+            override fun content(): String {
+                return content
+            }
+        }
+    }
+    open fun send2User(user: User) {
+        client.sendUserMessage(
+            target = user,
+            content = content(),
+            type = type,
+        )
     }
 }

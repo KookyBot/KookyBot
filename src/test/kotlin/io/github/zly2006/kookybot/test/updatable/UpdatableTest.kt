@@ -21,7 +21,6 @@ class UpdatableTest(
     @field:DontUpdate
     var no = "no"
     override fun update() {
-        TODO("Not yet implemented")
     }
 }
 fun main() {

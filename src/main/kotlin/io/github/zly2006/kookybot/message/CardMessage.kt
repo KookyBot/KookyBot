@@ -22,7 +22,6 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.events.CardButtonClickEvent
 import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
 import io.github.zly2006.kookybot.events.direct.DirectMessageEvent
@@ -388,13 +387,6 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
         return root.toJson().toString()
     }
 
-    override fun send2Channel(channel: TextChannel) {
-        client.sendChannelMessage(
-            type = 10,
-            target = channel,
-            content = content()
-        )
-    }
     override val type: Int = 10
     init {
         MessageScope().contentBuilder()
