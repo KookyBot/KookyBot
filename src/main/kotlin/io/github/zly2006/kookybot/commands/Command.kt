@@ -1,5 +1,6 @@
 package io.github.zly2006.kookybot.commands
 
+@Deprecated("Use brigadier instead.")
 abstract class Command(
     val name: String,
     val alias: List<String> = listOf(),

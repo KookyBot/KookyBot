@@ -2,11 +2,19 @@
 
 **简体中文** | [English](README_en.md)
 
+[![](https://img.shields.io/github/contributors/zly2006/KookyBot)](https://github.com/zly2006/KookyBot/graphs/contributors)
+[![github stars](https://img.shields.io/github/stars/zly2006/KookyBot)](https://github.com/zly2006/KookyBot/stargazers)
+![Build Status](https://www.travis-ci.org/zly2006/KookyBot.svg?branch=master)
+[![KookyBot](https://www.kaiheila.cn/api/v3/badge/guild?guild_id=6435808750354421&style=3)](https://kaihei.co/wnWOP9)
+[![Release](https://jitpack.io/v/zly2006/KookyBot.svg)](https://jitpack.io/#zly2006/KookyBot)
+[![GitHub issues by-label](https://img.shields.io/github/issues/zly2006/KookyBot)](https://github.com/zly2006/KookyBot/issues?q=is%3Aissue+is%3Aopen)
+
+
 JVM 平台上的 KOOK (原开黑啦) Bot SDK
 
 ## 开发计划
 
-- [ ] 完整缓存模型
+- [ ] 完整缓存模型x
 - [ ] 缓存模型自动更新
 - [ ] 登录状态机稳定的自动重连
 
