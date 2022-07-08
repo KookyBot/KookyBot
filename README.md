@@ -2,28 +2,29 @@
 
 **简体中文** | [English](README_en.md)
 
-[![](https://img.shields.io/github/contributors/zly2006/KookyBot)](https://github.com/zly2006/KookyBot/graphs/contributors)
-[![github stars](https://img.shields.io/github/stars/zly2006/KookyBot)](https://github.com/zly2006/KookyBot/stargazers)
-![Build Status](https://www.travis-ci.org/zly2006/KookyBot.svg?branch=master)
+[![](https://img.shields.io/github/contributors/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/graphs/contributors)
+[![github stars](https://img.shields.io/github/stars/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/stargazers)
+![Build Status](https://www.travis-ci.org/KookyBot/KookyBot.svg?branch=master)
 [![KookyBot](https://www.kaiheila.cn/api/v3/badge/guild?guild_id=6435808750354421&style=3)](https://kaihei.co/wnWOP9)
-[![Release](https://jitpack.io/v/zly2006/KookyBot.svg)](https://jitpack.io/#zly2006/KookyBot)
-[![GitHub issues by-label](https://img.shields.io/github/issues/zly2006/KookyBot)](https://github.com/zly2006/KookyBot/issues?q=is%3Aissue+is%3Aopen)
+[![Release](https://jitpack.io/v/KookyBot/KookyBot.svg)](https://jitpack.io/#KookyBot/KookyBot)
+[![GitHub issues by-label](https://img.shields.io/github/issues/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/issues?q=is%3Aissue+is%3Aopen)
 
 
 JVM 平台上的 KOOK (原开黑啦) Bot SDK
 
 ## 开发计划
 
-- [ ] 完整缓存模型x
+- [ ] 完整缓存模型
 - [ ] 缓存模型自动更新
 - [ ] 登录状态机稳定的自动重连
 
 ## Quick Starting
 
-1. 在本项目[JitPack页面](https://jitpack.io/#zly2006/KookyBot) 找到最新发布版并使用maven等工具导入（推荐），或者clone本仓库并运行`gradle jar`然后手动导入生成的库（不推荐）
+1. 在本项目[JitPack页面](https://jitpack.io/#KookyBot/KookyBot) 找到最新发布版并使用maven等工具导入（推荐），或者clone本仓库并运行`gradle jar`然后手动导入生成的库（不推荐）
 2. 写下你的第一行代码
 
-kotlin:
+Kotlin:
+
 ```kotlin
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
@@ -56,7 +57,8 @@ fun main() {
     awaitCancellation()
 }
 ```
-java:
+
+Java:
 
 ```java
 package io.github.zly2006.kookybot.test.api;
@@ -89,6 +91,7 @@ public class JavaApiTest extends JavaBaseClass {
     }
 }
 ```
+
 4. 编译，运行！现在，把你的机器人拉进服务器，发一条hello吧
 
 ## 开源协议提示
@@ -111,7 +114,7 @@ public class JavaApiTest extends JavaBaseClass {
 
 优秀的衍生项目可以再次得到展示！欢迎把你的项目提交给我。
 
-[KookyGithub](https://github.com/zly2006/KookyGithub) - 将GithubWebhook的信息同步到Kook
+- [KookyGithub](https://github.com/zly2006/KookyGithub) - 将GithubWebhook的信息同步到Kook
 
 ## 联系我
 
