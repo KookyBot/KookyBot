@@ -6,6 +6,6 @@
 /data/token.txt
 
 # my files
-/src/test/kotlin/io/github/zly2006/kookybot/test/me/*
+/src/test/kotlin/io/github/kookybot/kookybot/test/me/*
 # old gradle
 build.gradle_old

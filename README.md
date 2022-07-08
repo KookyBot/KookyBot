@@ -26,8 +26,8 @@ JVM 平台上的 KOOK (原开黑啦) Bot SDK
 Kotlin:
 
 ```kotlin
-import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
+import io.github.kookybot.kookybot.client.Client
+import io.github.kookybot.kookybot.events.channel.ChannelMessageEvent
 
 fun main() {
     val client = Client("token")
@@ -61,15 +61,15 @@ fun main() {
 Java:
 
 ```java
-package io.github.zly2006.kookybot.test.api;
+package io.github.kookybot.kookybot.test.api;
 
-import io.github.zly2006.kookybot.JavaBaseClass;
-import io.github.zly2006.kookybot.client.Client;
-import io.github.zly2006.kookybot.contract.Self;
-import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent;
-import io.github.zly2006.kookybot.events.EventHandler;
-import io.github.zly2006.kookybot.events.Listener;
-import io.github.zly2006.kookybot.message.CardMessage;
+import io.github.kookybot.kookybot.JavaBaseClass;
+import io.github.kookybot.kookybot.client.Client;
+import io.github.kookybot.kookybot.contract.Self;
+import io.github.kookybot.kookybot.events.channel.ChannelMessageEvent;
+import io.github.kookybot.kookybot.events.EventHandler;
+import io.github.kookybot.kookybot.events.Listener;
+import io.github.kookybot.kookybot.message.CardMessage;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
