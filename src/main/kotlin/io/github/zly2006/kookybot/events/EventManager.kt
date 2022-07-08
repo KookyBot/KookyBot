@@ -19,11 +19,12 @@ package io.github.zly2006.kookybot.events
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.arguments.StringArgumentType
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.builder.RequiredArgumentBuilder
+import com.mojang.brigadier.exceptions.CommandSyntaxException
 import io.github.zly2006.kookybot.client.Client
-import io.github.zly2006.kookybot.commands.Command
-import io.github.zly2006.kookybot.commands.CommandContext
-import io.github.zly2006.kookybot.commands.RequireChannel
-import io.github.zly2006.kookybot.commands.RequireGuild
+import io.github.zly2006.kookybot.commands.*
 import io.github.zly2006.kookybot.contract.Guild
 import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.events.channel.*
@@ -58,97 +59,109 @@ class SingleEventHandler<T>(
 class EventManager(
     private val client: Client,
 ) {
-    val dispatcher = CommandDispatcher<CommandContext>()
+    val dispatcher = CommandDispatcher<CommandSource>()
     val listeners: MutableMap<KClass<out Event>, MutableList<SingleEventHandler<*>>> = mutableMapOf()
     val classListeners: MutableList<Listener1> = mutableListOf()
     val commands: MutableList<Command> = mutableListOf()
     // 用于click处理
     val clickEvents: MutableList<Pair<String, (CardButtonClickEvent) -> Unit>> = mutableListOf()
 
-    init {
-        commands.add(object : Command("help") {
-            override fun onExecute(context: CommandContext) {
-                if (context.channel != null) {
-                    context.channel.sendMessage("命令列表:\n" + commands.joinToString (separator = "\n"){ "${it.name} - ${it.description}" })
-                }
-                else {
-                    context.user.talkTo().sendMessage("命令列表:\n" + commands.joinToString (separator = "\n"){ "${it.name} - ${it.description}" })
-                }
-            }
-        })
-    }
-
     fun parseCommand(event: MessageEvent) {
         if (!event.content.startsWith('/')) return
-        val args = mutableListOf<String>()
-        event.content.substring(1 until event.content.length).split(' ').map {
-            if (it == "") listOf()
-            else if (it.contains("(met")) {
-                listOf(it)
-            } else
-                listOf(it)
-        }.forEach { args.addAll(it) }
-        if (args.size == 0) {
-            when (event) {
-                is DirectMessageEvent -> event.sender.sendMessage("找不到命令")
-                is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)找不到命令")
-            }
-            return
-        }
-        var command = commands.find { it.name == args[0] }
-        if (command == null) {
-            command = commands.find { it.alias.contains(args[0]) }
-            if (command == null) {
+        @Deprecated("")
+        if (commands.find { event.content.startsWith("/${it.name} ") } != null) {
+            val args = mutableListOf<String>()
+            event.content.substring(1 until event.content.length).split(' ').map {
+                if (it == "") listOf()
+                else if (it.contains("(met")) {
+                    listOf(it)
+                } else
+                    listOf(it)
+            }.forEach { args.addAll(it) }
+            if (args.size == 0) {
                 when (event) {
                     is DirectMessageEvent -> event.sender.sendMessage("找不到命令")
                     is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)找不到命令")
                 }
                 return
             }
+            val command = commands.find { it.name == args[0] }!!
+            val source = when (event) {
+                is DirectMessageEvent -> CommandContext(
+                    user = event.sender,
+                    label = args[0],
+                    args = if (args.size == 1) arrayOf() else args.subList(1, args.size).toTypedArray(),
+                    command = command,
+                    channel = null
+                )
+                is ChannelMessageEvent -> CommandContext(
+                    user = event.sender,
+                    label = args[0],
+                    args = if (args.size == 1) arrayOf() else args.subList(1, args.size).toTypedArray(),
+                    command = command,
+                    channel = event.channel
+                )
+                else -> throw Exception()
+            }
+            try {
+                var invoke = true
+                for (annotation in command.javaClass.getMethod("onExecute", CommandContext::class.java).annotations) {
+                    if (annotation is RequireGuild) {
+                        invoke = false
+                        if (event is ChannelMessageEvent) {
+                            if (event.guild.id == annotation.id) {
+                                invoke = true
+                                break
+                            }
+                        }
+                    }
+                    if (annotation is RequireChannel) {
+                        invoke = false
+                        if (event is ChannelMessageEvent) {
+                            if (event.channel.id != annotation.id) {
+                                invoke = true
+                                break
+                            }
+                        }
+                    }
+                }
+                if (invoke) {
+                    command.onExecute(source)
+                }
+            } catch (e: Exception) {
+                when (event) {
+                    is DirectMessageEvent -> event.sender.sendMessage("执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
+                    is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
+                }
+                e.printStackTrace()
+            }
+            return
         }
-        val source  = when (event) {
-            is DirectMessageEvent -> CommandContext(
-                user = event.sender,
-                label = args[0],
-                args = if (args.size == 1) arrayOf() else args.subList(1, args.size).toTypedArray(),
-                command = command,
-                channel = null
+        val source = when (event) {
+            is ChannelMessageEvent -> CommandSource(
+                type = CommandSource.Type.Channel,
+                channel = event.channel,
+                user = event.sender
             )
-            is ChannelMessageEvent -> CommandContext(
+            is DirectMessageEvent -> CommandSource(
+                type = CommandSource.Type.Private,
                 user = event.sender,
-                label = args[0],
-                args = if (args.size == 1) arrayOf() else args.subList(1, args.size).toTypedArray(),
-                command = command,
-                channel = event.channel
+                private = event.sender
             )
-            else -> throw Exception()
+            else -> {
+                if (event.authorId == "-1") CommandSource()
+                else throw Exception("invalid type")
+            }
         }
-        //dispatcher.execute(event.content.substring(1 until event.content.length), source)
         try {
-            var invoke = true
-            for (annotation in command.javaClass.getMethod("onExecute", CommandContext::class.java).annotations) {
-                if (annotation is RequireGuild) {
-                    invoke = false
-                    if (event is ChannelMessageEvent) {
-                        if (event.guild.id == annotation.id) {
-                            invoke = true
-                            break
-                        }
-                    }
-                }
-                if (annotation is RequireChannel) {
-                    invoke = false
-                    if (event is ChannelMessageEvent) {
-                        if (event.channel.id != annotation.id) {
-                            invoke = true
-                            break
-                        }
-                    }
-                }
+            dispatcher.execute(event.content.substring(1), source)
+        }
+        catch (e: CommandSyntaxException) {
+            when (event) {
+                is DirectMessageEvent -> event.sender.sendMessage("命令语法不正确。详细信息：\n```\n${e.localizedMessage}\n```")
+                is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)命令语法不正确。详细信息：\n```\n${e.localizedMessage}\n```")
             }
-            if (invoke) {
-                command.onExecute(source)
-            }
+            e.printStackTrace()
         }
         catch (e: Exception) {
             when (event) {
@@ -338,5 +351,29 @@ class EventManager(
 
     fun addCommand(command: Command) {
         commands.add(command)
+    }
+
+    fun addCommand(listener: (CommandDispatcher<CommandSource>) -> Unit) {
+        listener(dispatcher)
+    }
+
+    init {
+        addCommand {
+            dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("help")
+                .executes { context ->
+                    context.source.sendMessage(
+                        dispatcher.getAllUsage(dispatcher.root, context.source, true).joinToString("") { "\n/${it}" }
+                    )
+                    return@executes 0
+                }
+            )
+            dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("echo")
+                .then(RequiredArgumentBuilder.argument("text", StringArgumentType.greedyString()))
+                .executes {
+                    it.source.sendMessage(StringArgumentType.getString(it, "text"))
+                    return@executes 0
+                }
+            )
+        }
     }
 }

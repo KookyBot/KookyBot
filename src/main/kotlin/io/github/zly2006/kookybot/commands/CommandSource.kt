@@ -6,17 +6,16 @@ import io.github.zly2006.kookybot.contract.User
 import org.slf4j.LoggerFactory
 
 class CommandSource(
-
+    val type: Type = Type.Console,
+    val channel: TextChannel? = null,
+    val private: PrivateChatUser? = null,
+    val user: User? = null
 ) {
     enum class Type {
         Console,
         Private,
         Channel
     }
-    val type: Type = Type.Console
-    val channel: TextChannel? = null
-    val private: PrivateChatUser? = null
-    val user: User? = null
     fun sendMessage(message: String) {
         when (type) {
             Type.Console -> LoggerFactory.getLogger("Command ").info(message)

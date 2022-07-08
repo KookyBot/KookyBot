@@ -1,11 +1,11 @@
 package io.github.zly2006.kookybot.test.api
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import io.github.zly2006.kookybot.client.Client
 import io.github.zly2006.kookybot.commands.Command
 import io.github.zly2006.kookybot.commands.CommandContext
 import io.github.zly2006.kookybot.commands.RequireChannel
 import io.github.zly2006.kookybot.commands.RequireGuild
-import io.github.zly2006.kookybot.contract.PrivateChatUser
 import io.github.zly2006.kookybot.events.channel.ChannelMessageEvent
 import io.github.zly2006.kookybot.message.CardMessage
 import io.github.zly2006.kookybot.message.SelfMessage
@@ -48,25 +48,9 @@ suspend fun main() {
             }
         }
     }
-    client.eventManager.commands.add(object : Command(
-        name = "echo",
-        alias = listOf("test_echo")
-    ) {
-        override fun onExecute(context: CommandContext) {
-            if (context.channel != null) {
-                context.channel!!.sendMessage(context.args[0])
-            }
-            else {
-                (context.user as PrivateChatUser).sendMessage(context.args[0])
-            }
-        }
-    })
-    client.eventManager.commands.add(object : Command("stop", ) {
-        override fun onExecute(context: CommandContext) {
-            client.close()
-            Runtime.getRuntime().exit(0)
-        }
-    })
+    client.addCommand { dispatcher ->
+        dispatcher.register(LiteralArgumentBuilder.literal(""))
+    }
     client.eventManager.addCommand(object : Command("lottery") {
         override fun onExecute(context: CommandContext) {
             if (context.channel == null) return

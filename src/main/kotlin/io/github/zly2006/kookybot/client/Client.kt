@@ -20,7 +20,9 @@ package io.github.zly2006.kookybot.client
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.mojang.brigadier.CommandDispatcher
 import io.github.zly2006.kookybot.client.Client.RequestType.*
+import io.github.zly2006.kookybot.commands.CommandSource
 import io.github.zly2006.kookybot.contract.Self
 import io.github.zly2006.kookybot.contract.TextChannel
 import io.github.zly2006.kookybot.contract.User
@@ -51,6 +53,7 @@ import java.util.concurrent.TimeUnit
 import java.util.zip.InflaterInputStream
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.jvm.optionals.getOrNull
 
 enum class State {
     Initialized,
@@ -251,6 +254,7 @@ class Client (var token : String) {
         return builder.build()
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     fun sendRequest(request: HttpRequest): JsonObject {
         val response = httpClient.send(request, BodyHandlers.ofString())
         println(response.body())
@@ -258,10 +262,28 @@ class Client (var token : String) {
         when (json.get("code").asInt) {
             0 -> {
                 return try{
+                    if (json.has("items") && json.get("items").isJsonArray && !request.uri().query.contains("page")) {
+                        val meta = json.get("meta").asJsonObject
+                        val total = meta.get("page_total").asInt
+                        if (total != 1) {
+                            for (i in (1 until total)) {
+                                var url = request.uri().toString()
+                                url += if (url.contains('?')) "&page=$i"
+                                else "?page=$i"
+                                val req = HttpRequest.newBuilder(URI(url))
+                                    .method(request.method(), request.bodyPublisher().getOrNull())
+                                for (header in request.headers().map()) {
+                                    req.header(header.key, header.value[0])
+                                    // TODO
+                                }
+                                sendRequest(req.build())
+                            }
+                        }
+                    }
                     json.get("data").asJsonObject
                 }
                 catch (e: Exception) {
-                    if (json.get("data").asJsonArray.isEmpty)
+                    if (json.has("data") && json.get("data").isJsonArray)
                         JsonObject()
                     else
                         throw e
@@ -371,7 +393,7 @@ class Client (var token : String) {
         sessionId = ""
         lastSn = -1
         self = null
-        GlobalScope.coroutineContext.cancel()
+        GlobalScope.coroutineContext.cancel(CancellationException("reconnecting"))
         GlobalScope.launch {
             this@Client.connect()
         }
@@ -522,5 +544,8 @@ class Client (var token : String) {
         webSocketClient?.closeBlocking()
         pingThread.interrupt()
         updateJob?.cancel()
+    }
+    fun addCommand(listener: (CommandDispatcher<CommandSource>) -> Unit) {
+        listener(eventManager.dispatcher)
     }
 }

@@ -85,7 +85,7 @@ class Guild(
             .asJsonArray
             .map { it.asJsonObject }
             .filter { !it.get("is_category").asBoolean }
-            .filter { channels.map { it.id }.contains(it.get("id").asString) }
+            .filter { !channels.map { it.id }.contains(it.get("id").asString) }
             .map {
             val id = it.get("id").asString
             val channel = when (it.get("type").asInt) {

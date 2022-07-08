@@ -15,7 +15,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.zly2006.kookybot
+import com.google.gson.JsonObject
 import io.github.zly2006.kookybot.client.Client
+import io.github.zly2006.kookybot.events.MessageEvent
 import io.github.zly2006.kookybot.plugin.Plugin
 import java.io.File
 import java.net.URLClassLoader
@@ -54,15 +56,18 @@ suspend fun main() {
     val client = Client(token)
     val self = client.start()
     while (true) {
-        val cmd = readln().split(' ')
-        when (cmd[0]) {
-            "license" -> {
-                println("KookyBot Console")
-                println("This is a free software under AGPL v3.")
-                println("Copyright (c) 2022, zly2006 & contributors.")
-
-                println("Reference & thx: khl-voice-API by hank9999 at <https://github.com/hank9999/khl-voice-API>")
-            }
-        }
+        val cmd = readln()
+        client.eventManager.parseCommand(
+            object : MessageEvent(
+                _channelType = "PERSON",
+                _type = 0,
+                authorId = "-1",
+                timestamp = "-1",
+                content = cmd,
+                extra = JsonObject(),
+                messageId = "-1",
+                targetId = "-1"
+            ) {}
+        )
     }
 }
