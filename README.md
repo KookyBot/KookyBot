@@ -20,9 +20,8 @@ JVM 平台上的 KOOK (原开黑啦) Bot SDK
 
 ## Quick Starting
 
-1. 在 [Releases](https://github.com/zly2006/KookyBot/releases) 下载下载最新版jar或clone本仓库并运行`gradle jar`
-2. 新建一个java或kotlin项目，并把jar作为库导入
-3. 写下你的第一行代码
+1. 在本项目[JitPack页面](https://jitpack.io/#zly2006/KookyBot) 找到最新发布版并使用maven等工具导入（推荐），或者clone本仓库并运行`gradle jar`然后手动导入生成的库（不推荐）
+2. 写下你的第一行代码
 
 kotlin:
 ```kotlin
