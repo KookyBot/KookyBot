@@ -67,8 +67,8 @@ import io.github.kookybot.JavaBaseClass;
 import io.github.kookybot.client.Client;
 import io.github.kookybot.contract.Self;
 import io.github.kookybot.events.channel.ChannelMessageEvent;
-import events.io.github.kookybot.EventHandler;
-import events.io.github.kookybot.Listener;
+import io.github.kookybot.events.EventHandler;
+import io.github.kookybot.events.Listener;
 import io.github.kookybot.message.CardMessage;
 
 import java.io.BufferedReader;
