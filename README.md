@@ -26,8 +26,8 @@ JVM 平台上的 KOOK (原开黑啦) Bot SDK
 Kotlin:
 
 ```kotlin
-import io.github.kookybot.kookybot.client.Client
-import io.github.kookybot.kookybot.events.channel.ChannelMessageEvent
+import io.github.kookybot.client.Client
+import io.github.kookybot.events.channel.ChannelMessageEvent
 
 fun main() {
     val client = Client("token")
@@ -61,15 +61,15 @@ fun main() {
 Java:
 
 ```java
-package io.github.kookybot.kookybot.test.api;
+package io.github.kookybot.test.api;
 
-import io.github.kookybot.kookybot.JavaBaseClass;
-import io.github.kookybot.kookybot.client.Client;
-import io.github.kookybot.kookybot.contract.Self;
-import io.github.kookybot.kookybot.events.channel.ChannelMessageEvent;
-import io.github.kookybot.kookybot.events.EventHandler;
-import io.github.kookybot.kookybot.events.Listener;
-import io.github.kookybot.kookybot.message.CardMessage;
+import io.github.kookybot.JavaBaseClass;
+import io.github.kookybot.client.Client;
+import io.github.kookybot.contract.Self;
+import io.github.kookybot.events.channel.ChannelMessageEvent;
+import events.io.github.kookybot.EventHandler;
+import events.io.github.kookybot.Listener;
+import io.github.kookybot.message.CardMessage;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;

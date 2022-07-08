@@ -8,7 +8,7 @@ group property('group')
 version property('version')
 
 application {
-    mainClass.set('io.github.kookybot.kookybot.LanucherKt')
+    mainClass.set('io.github.kookybot.LanucherKt')
 }
 
 repositories {
@@ -74,7 +74,7 @@ jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     setArchivesBaseName(project.name)
     manifest {
-        attributes 'Main-Class': 'io.github.kookybot.kookybot.LanucherKt'
+        attributes 'Main-Class': 'io.github.kookybot.LanucherKt'
     }
     from configurations.runtimeClasspath.collect {it.isDirectory() ? it : zipTree(it) }
 }
