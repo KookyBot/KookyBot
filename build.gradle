@@ -1,5 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.7.0'
+    id "org.jetbrains.dokka" version "1.7.0"
     id 'application'
     id 'maven-publish'
 }
@@ -33,6 +34,9 @@ dependencies {
     implementation 'org.yaml:snakeyaml:1.30'
     implementation 'com.mojang:brigadier:1.0.18'
     implementation 'org.jvoicexml:org.jlibrtp:0.2'
+
+    // kotlin JavaDoc
+    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.7.0")
 }
 
 test {
@@ -62,12 +66,28 @@ java {
     withJavadocJar()
 }
 
+dokkaJavadoc {
+    outputDirectory = javadoc.destinationDir
+}
+
 publishing {
     publications {
         maven(MavenPublication) {
             from components.java
         }
     }
+}
+
+task generateJavadoc(type: Jar, dependsOn: dokkaJavadoc) {
+    group = 'jar'
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives generateJavadoc //javadocJar
+    archives sourcesJar
+    //archives generateSourcesJar //sourcesJar
 }
 
 jar {
