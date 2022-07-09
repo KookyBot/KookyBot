@@ -108,7 +108,7 @@ It is working in progress, please wait.
 
 ## Contributing
 
-We look forward to your contributions to this project! You can help us improve our even, add the HTTP API that doesn't exist yet, help us to complete our documentation, or add your own sample code!
+We look forward to your contributions to this project! You can help us improve our events system, add the HTTP API that doesn't exist yet, help us to complete our documentation, or add your own sample code!
 
 ## Derived Projects
 
