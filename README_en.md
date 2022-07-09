@@ -10,7 +10,7 @@
 [![GitHub issues by-label](https://img.shields.io/github/issues/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/issues?q=is%3Aissue+is%3Aopen)
 
 
-An SDK to build bot on KOOK (formally KaiHeiLa) for JVM platforms.
+An SDK to build bot on KOOK (formerly known as KaiHeiLa) for JVM platforms.
 
 ## Development Plan
 
