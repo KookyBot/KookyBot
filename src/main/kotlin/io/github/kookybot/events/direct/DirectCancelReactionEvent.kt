@@ -1,9 +1,11 @@
 package io.github.kookybot.events.direct
 
 import io.github.kookybot.contract.PrivateChatUser
+import io.github.kookybot.contract.Self
 import io.github.kookybot.utils.Emoji
 
 class DirectCancelReactionEvent (
+    self: Self,
     @field:Transient
     var emoji: Emoji,
     sender: PrivateChatUser,
@@ -14,4 +16,4 @@ class DirectCancelReactionEvent (
     content: String,
     sid: String,
     timestamp: String,
-): DirectMessageEvent(sender, _channelType, _type, targetId, authorId, content, sid, timestamp)
+): DirectMessageEvent(self, sender, _channelType, _type, targetId, authorId, content, sid, timestamp)

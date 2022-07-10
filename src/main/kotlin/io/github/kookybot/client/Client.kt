@@ -23,6 +23,7 @@ import com.google.gson.JsonObject
 import com.mojang.brigadier.CommandDispatcher
 import io.github.kookybot.client.Client.RequestType.*
 import io.github.kookybot.commands.CommandSource
+import io.github.kookybot.commands.PermissionManager
 import io.github.kookybot.contract.Self
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.contract.User
@@ -93,6 +94,7 @@ class Client (var token : String) {
     private var webSocketClient: WebSocketClient? = null
     private val httpClient = HttpClient.newHttpClient()
     val eventManager = EventManager(this)
+    val permissionManager = PermissionManager(this)
     private val updatableList: MutableList<Updatable> = mutableListOf()
     private var updateJob: Job? = null
 
@@ -157,7 +159,8 @@ class Client (var token : String) {
         VOICE_GATEWAY,
         OFFLINE,
         CREATE_CHANNEL,
-
+        ADD_REACTION,
+        CANCEL_REACTION,
     }
 
     fun ping() {
@@ -248,6 +251,12 @@ class Client (var token : String) {
                 .header("content-type", "application/json")
                 .POST(postAll(mapOf()))
             CREATE_CHANNEL -> builder.uri(apiOf("/channel/create"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
+            ADD_REACTION -> builder.uri(apiOf("/message/add-reaction"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
+            CANCEL_REACTION -> builder.uri(apiOf("/message/delete-reaction"))
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
         }

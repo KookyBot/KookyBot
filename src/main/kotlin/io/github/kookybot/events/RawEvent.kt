@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 package io.github.kookybot.events
 
 import com.google.gson.JsonObject
+import io.github.kookybot.contract.Self
 
 /**
  * 警告：除非万不得已，不要直接使用json解析。清时刻关注api的更新，以保证您的代码有更好的兼容性。
@@ -24,5 +25,6 @@ import com.google.gson.JsonObject
  * 如有需要，清发布issue
  */
 class RawEvent(
-    val raw: JsonObject
+    val raw: JsonObject,
+    override val self: Self
 ): Event

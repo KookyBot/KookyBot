@@ -18,10 +18,12 @@ package io.github.kookybot.events.channel
 
 import io.github.kookybot.contract.Guild
 import io.github.kookybot.contract.GuildUser
+import io.github.kookybot.contract.Self
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.events.MessageEvent
 
 open class ChannelMessageEvent(
+    self: Self,
     @field:Transient
     var channel: TextChannel,
     @field:Transient
@@ -35,4 +37,4 @@ open class ChannelMessageEvent(
     content: String,
     sid: String,
     timestamp: String
-): MessageEvent(_channelType, _type, targetId, authorId, content, sid, timestamp)
+): MessageEvent(self, _channelType, _type, targetId, authorId, content, sid, timestamp)

@@ -19,6 +19,7 @@ package io.github.kookybot.commands
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.contract.User
 
+@Deprecated("use brigadier")
 data class CommandContext(
     val user: User,
     val channel: TextChannel? = null,

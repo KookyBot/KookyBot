@@ -18,10 +18,14 @@ package io.github.kookybot.events
 
 import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
+import io.github.kookybot.client.Client
+import io.github.kookybot.contract.Self
 import io.github.kookybot.events.self.SelfReactionEvent
 import io.github.kookybot.utils.Emoji
 
 open class MessageEvent(
+    @field:Transient
+    override val self: Self,
     @field:SerializedName("channel_type")
     private var _channelType: String,
     @field:SerializedName("type")
@@ -42,7 +46,7 @@ open class MessageEvent(
     var messageId: String,
     @field:SerializedName("msg_timestamp")
     var timestamp: String,
-    var extra: JsonObject = JsonObject()
+    var extra: JsonObject = JsonObject(),
 ): Event {
     enum class EventType {
         UNKNOWN,
@@ -79,7 +83,10 @@ open class MessageEvent(
         else -> ChannelType.UNKNOWN
     }
     fun postReaction(emoji: Emoji): SelfReactionEvent {
-        TODO()
+        with(self.client) {
+            sendRequest(requestBuilder(Client.RequestType.ADD_REACTION, "emoji" to emoji.id, "msg_id" to messageId))
+        }
+        return SelfReactionEvent(this,emoji,self)
     }
     val reactions: Map<Emoji, Int>
         get() = TODO()

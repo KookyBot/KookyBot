@@ -35,35 +35,46 @@ class Guild(
 ): Updatable {
     @field:SerializedName("master_id")
     var masterId: String = ""
+
     @field:SerializedName("name")
     var name: String = ""
+
     @field:SerializedName("topic")
     var topic: String = ""
+
     @field:SerializedName("icon")
     var iconUrl: String = ""
+
     @field:SerializedName("notify_type")
     var notifyType: NotifyType = NotifyType.NONE
+
     @field:SerializedName("region")
     var region: String = ""
+
     @field:Transient
     var defaultChannel: TextChannel? = null
+
     @field:Transient
     var welcomeChannel: TextChannel? = null
+
     @field:SerializedName("open_id")
-    /**
-     * 公开邀请链接id，为null说明不公开
-     */
+            /**
+             * 公开邀请链接id，为null说明不公开
+             */
     var openId: Int? = null
+
     @field:SerializedName("level")
     var level: Int = 0
+
     @field:SerializedName("boost_num")
     var boostCount: Int = 0
+
     @field:Transient
     var channels: List<Channel> = listOf()
+
     @field:Transient
     var categories: List<Category> = listOf()
-    @field:DontUpdate
-    var users: Lazy<List<GuildUser>> = lazy {
+    private var lazyUsers: Lazy<List<GuildUser>> = lazy {
         client.sendRequest(client.requestBuilder(Client.RequestType.GUILD_USER_LIST, "guild_id" to id))
             .get("items").asJsonArray.map { it.asJsonObject.get("id").asString }.map {
                 val user = GuildUser(client, it, this@Guild)
@@ -71,6 +82,7 @@ class Guild(
                 return@map user
             }.toList()
     }
+    val users get() = lazyUsers.value
     @field:DontUpdate
     var roleMap: Map<Int, GuildRole> = mapOf()
 

@@ -3,7 +3,7 @@
 /build/
 
 # token path
-/data/token.txt
+/data/*
 
 # my files
 /src/test/kotlin/io/github/kookybot/kookybot/test/me/*

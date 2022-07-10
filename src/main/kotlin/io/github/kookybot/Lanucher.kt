@@ -15,9 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.kookybot
-import com.google.gson.JsonObject
 import io.github.kookybot.client.Client
-import io.github.kookybot.events.MessageEvent
 import io.github.kookybot.plugin.Plugin
 import java.io.File
 import java.net.URLClassLoader
@@ -37,13 +35,18 @@ val launcher = object : Lanucher {
             println("please fill your token in data/token/txt")
         }
         File("plugins/").listFiles()?.forEach {
-            if (it.name.endsWith(".jar")) run {
-                val loader = URLClassLoader(arrayOf(it.toURI().toURL()))
-                val content = loader.getResource("plugin.yml").content
+            try {
+                if (it.name.endsWith(".jar")) run {
+                    val loader = URLClassLoader(arrayOf(it.toURI().toURL()))
+                    val content = loader.getResource("plugin.yml")!!.content
+                }
+                if (it.name.endsWith(".class")) run {
+                    val loader = URLClassLoader(arrayOf(it.parentFile.toURI().toURL()))
+                    loader.loadClass(it.nameWithoutExtension)
+                }
             }
-            if (it.name.endsWith(".class")) run {
-                val loader = URLClassLoader(arrayOf(it.parentFile.toURI().toURL()))
-                loader.loadClass(it.nameWithoutExtension)
+            catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -57,17 +60,6 @@ suspend fun main() {
     val self = client.start()
     while (true) {
         val cmd = readln()
-        client.eventManager.parseCommand(
-            object : MessageEvent(
-                _channelType = "PERSON",
-                _type = 0,
-                authorId = "-1",
-                timestamp = "-1",
-                content = cmd,
-                extra = JsonObject(),
-                messageId = "-1",
-                targetId = "-1"
-            ) {}
-        )
+        client.eventManager.parseCommand(cmd)
     }
 }

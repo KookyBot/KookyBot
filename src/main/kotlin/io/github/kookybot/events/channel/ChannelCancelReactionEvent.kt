@@ -17,10 +17,12 @@ package io.github.kookybot.events.channel
 
 import io.github.kookybot.contract.Guild
 import io.github.kookybot.contract.GuildUser
+import io.github.kookybot.contract.Self
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.utils.Emoji
 
 class ChannelCancelReactionEvent (
+    self: Self,
     var emoji: Emoji,
     channel: TextChannel,
     sender: GuildUser,
@@ -32,4 +34,4 @@ class ChannelCancelReactionEvent (
     content: String,
     sid: String,
     timestamp: String
-): ChannelMessageEvent(channel, sender, guild, _channelType, _type, targetId, authorId, content, sid, timestamp)
+): ChannelMessageEvent(self, channel, sender, guild, _channelType, _type, targetId, authorId, content, sid, timestamp)

@@ -1,6 +1,5 @@
 package io.github.kookybot.test.api
 
-import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import io.github.kookybot.client.Client
 import io.github.kookybot.commands.Command
 import io.github.kookybot.commands.CommandContext
@@ -47,9 +46,6 @@ suspend fun main() {
                 }
             }
         }
-    }
-    client.addCommand { dispatcher ->
-        dispatcher.register(LiteralArgumentBuilder.literal(""))
     }
     client.eventManager.addCommand(object : Command("lottery") {
         override fun onExecute(context: CommandContext) {
@@ -157,16 +153,6 @@ suspend fun main() {
         }
     })
     while (true) {
-        var cmd = readln()
-        if (cmd == "status") {
-            println("${client.status} ${client.pingStatus} ${client.pingDelay}")
-        }
-        if (cmd == "stop") {
-            client.close()
-            return
-        }
-        if (cmd == "ping") {
-            client.ping()
-        }
+        client.eventManager.parseCommand(readln())
     }
 }

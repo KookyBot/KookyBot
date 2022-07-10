@@ -62,7 +62,7 @@ class Self(
     }
 
     fun getGuildUser(id: String, guild: String): GuildUser? {
-        return guilds.firstOrNull { it.id == guild }?.users?.value?.firstOrNull { it.id == id }
+        return guilds.firstOrNull { it.id == guild }?.users?.firstOrNull { it.id == id }
     }
 
     internal fun updatePrivateChatUser(userId: String): PrivateChatUser {
@@ -77,7 +77,7 @@ class Self(
     }
 
     init {
-        val json =client.sendRequest(client.requestBuilder(Client.RequestType.USER_ME))
+        val json = client.sendRequest(client.requestBuilder(Client.RequestType.USER_ME))
             .asJsonObject
         id = json.get("id").asString
         logger.info("${json.get("username").asString}#${json.get("identify_num").asString} $id")

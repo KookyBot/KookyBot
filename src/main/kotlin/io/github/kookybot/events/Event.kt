@@ -16,5 +16,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.kookybot.events
 
+import io.github.kookybot.contract.Self
+
 interface Event {
+    val self: Self
 }

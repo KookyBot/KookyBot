@@ -16,7 +16,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.kookybot.events
 
+import io.github.kookybot.contract.Self
+
 class SystemMessageEvent(
+    self: Self,
     _channelType: String,
     _type: Int,
     targetId: String,
@@ -24,5 +27,5 @@ class SystemMessageEvent(
     content: String,
     sid: String,
     timestamp: String
-) : MessageEvent(_channelType, _type, targetId, authorId, content, sid, timestamp) {
+) : MessageEvent(self, _channelType, _type, targetId, authorId, content, sid, timestamp) {
 }

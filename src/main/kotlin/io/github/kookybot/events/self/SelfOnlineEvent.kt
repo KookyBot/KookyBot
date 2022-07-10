@@ -20,5 +20,5 @@ import io.github.kookybot.contract.Self
 import io.github.kookybot.events.Event
 
 class SelfOnlineEvent (
-    val self: Self
+     override val self: Self,
 ): Event

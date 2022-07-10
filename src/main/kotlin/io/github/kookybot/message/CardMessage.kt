@@ -118,7 +118,8 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
                                 targetId = channel!!.id,
                                 sid = "offered by KookyBot",
                                 sender = sender.atGuild(channel!!.guild)!!,
-                                timestamp = "offered by KookyBot"
+                                timestamp = "offered by KookyBot",
+                                self = client.self!!
                             )
                         }
                         else {
@@ -130,7 +131,8 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
                                 targetId = sender.id,
                                 sid = "offered by KookyBot",
                                 sender = sender.talkTo(),
-                                timestamp = "offered by KookyBot"
+                                timestamp = "offered by KookyBot",
+                                self = client.self!!
                             )
                         }
                         client.eventManager.parseCommand(event)
