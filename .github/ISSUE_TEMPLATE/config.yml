@@ -5,6 +5,7 @@ contact_links:
     about: Refer to the docs and search for what you are looking for. | 参考文档并搜索您所需的内容。
   - name: Search or ask in KOOK Server | 在 KOOK 服务器中搜索或提问
     url: https://kook.top/wnWOP9
+    about: Ask questions and discuss with KookyBot maintainers and other KookyBot users in real-time. | 在 KOOK 服务器中搜索或提问，与 KookyBot 的维护者和其他 KookyBot 用户进行实时交流。
   - name: Problems about the documentation | 关于文档的问题
-    url: https://github.com/KookyBot/KookyBot-Docs/issues
+    url: https://github.com/KookyBot/KookyBot-Docs/issues/new/choose
     about: Open an issue in the documentation repository. | 在文档仓库中提交 issue。
