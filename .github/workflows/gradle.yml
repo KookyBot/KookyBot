@@ -29,6 +29,13 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
     - name: Build with Gradle
-      uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
+      uses: gradle/gradle-build-action@v2.2.1
       with:
         arguments: jar
+    - name: Get short SHA
+      run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: KookyBot-${{ env.SHORT_SHA }}
+        path: build/libs
