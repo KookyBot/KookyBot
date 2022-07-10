@@ -1,0 +1,54 @@
+name: Feature request
+description: Suggest an idea for KookyBot
+title: "[Feature Request]: "
+labels: ["enhancement"]
+assignees: zly2006
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue.
+        
+        > ### Important! :warning:
+        > 
+        > The issue list is reserved exclusively for bug reports and feature requests. That means we do not accept usage questions. If you open an issue that does not conform to the requirements, it will be closed.
+        >
+        > For usage questions, please refer to the following resources:
+        > * Search the [docs](https://kookybot.rtfd.io)
+        > * Search or ask in [KOOK Server](https://kook.top/wnWOP9)
+
+  - type: textarea
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+
+  - type: textarea
+    attributes:
+      label: Describe alternatives you've considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+
+  - type: textarea
+    attributes:
+      label: Anything else?
+      description: Add any other context, code examples, or references to existing implementations about the feature request here.
+
+  - type: markdown
+    attributes:
+      value: |
+        ---------
+        
+        Before you submit this issue, please confirm the following:
+        
+        **1. Is there an existing issue for this?**
+        
+        Please search to see if an issue related to this feature request already exists.
+        
+        ---------
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Please accept these terms
+      options:
+        - label: I have searched the [existing issues](https://github.com/KookyBot/KookyBot/issues) and this has not been posted before
+          required: true
