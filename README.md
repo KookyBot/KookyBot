@@ -9,18 +9,25 @@
 [![Release](https://jitpack.io/v/KookyBot/KookyBot.svg)](https://jitpack.io/#KookyBot/KookyBot)
 [![GitHub issues by-label](https://img.shields.io/github/issues/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/issues?q=is%3Aissue+is%3Aopen)
 
-
 JVM 平台上的 KOOK (原开黑啦) Bot SDK
 
 ## 开发计划
 
-- [ ] 完整缓存模型
-- [ ] 缓存模型自动更新
+- [ ] 完整缓存模型 - Role & 操作api
+- [x] 缓存模型自动更新
 - [ ] 登录状态机稳定的自动重连
+
+事件：
+
+- [ ] guild_member_online / guild_member_offline
+- [ ] user_updated
+- [ ] pinned_message / unpinned_message
+- [x] 其余事件
 
 ## Quick Starting
 
-1. 在本项目[JitPack页面](https://jitpack.io/#KookyBot/KookyBot) 找到最新发布版并使用maven等工具导入（推荐），或者clone本仓库并运行`gradle jar`然后手动导入生成的库（不推荐）
+1. 在本项目[JitPack页面](https://jitpack.io/#KookyBot/KookyBot) 找到最新发布版并使用maven等工具导入（推荐），或者clone本仓库并运行`gradle jar`
+   然后手动导入生成的库（不推荐）
 2. 写下你的第一行代码
 
 Kotlin:

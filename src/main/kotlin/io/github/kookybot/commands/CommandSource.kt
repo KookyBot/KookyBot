@@ -16,20 +16,28 @@ class CommandSource(
         Private,
         Channel
     }
+
     fun sendMessage(message: String) {
         when (type) {
-            Type.Console -> LoggerFactory.getLogger("Command ").info(message)
+            Type.Console -> LoggerFactory.getLogger("Command").info(message)
             Type.Channel -> channel!!.sendMessage("(met)${user!!.id}(met)$message")
             Type.Private -> private!!.sendMessage(message)
         }
     }
+
     fun hasPermission(permission: String): Boolean {
         return when (type) {
             Type.Console -> true
-            Type.Channel -> channel!!.client.permissionManager.hasPermission(permission, user!!.id, channel.guild.id, channel.id)
+            Type.Channel -> channel!!.client.permissionManager.hasPermission(
+                permission,
+                user!!.id,
+                channel.guild.id,
+                channel.id
+            )
             Type.Private -> private!!.client.permissionManager.hasPermission(permission, user!!.id)
         }
     }
+
     fun setGlobalPermission(permission: String, value: Boolean?) {
         if (type == Type.Console) {
             throw Exception("Cannot set console permissions.")
@@ -40,6 +48,7 @@ class CommandSource(
             value = value
         )
     }
+
     fun setChannelPermission(permission: String, value: Boolean?) {
         if (type != Type.Channel) {
             throw Exception("Cannot set user permissions.")
@@ -51,6 +60,7 @@ class CommandSource(
             channelId = channel!!.id
         )
     }
+
     fun setGuildPermission(permission: String, value: Boolean?) {
         if (type != Type.Channel) {
             throw Exception("Cannot set user permissions.")

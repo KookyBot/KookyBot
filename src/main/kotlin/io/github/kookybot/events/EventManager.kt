@@ -19,6 +19,7 @@ package io.github.kookybot.events
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.ParseResults
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.builder.RequiredArgumentBuilder
@@ -31,8 +32,9 @@ import io.github.kookybot.events.channel.*
 import io.github.kookybot.events.direct.DirectCancelReactionEvent
 import io.github.kookybot.events.direct.DirectMessageEvent
 import io.github.kookybot.events.direct.DirectPostReactionEvent
-import io.github.kookybot.events.guild.GuildDeleteEvent
-import io.github.kookybot.events.guild.GuildUpdateEvent
+import io.github.kookybot.events.guild.*
+import io.github.kookybot.events.self.SelfExitedGuildEvent
+import io.github.kookybot.events.self.SelfJoinedGuildEvent
 import io.github.kookybot.events.self.SelfMessageEvent
 import io.github.kookybot.message.SelfMessage
 import io.github.kookybot.utils.Emoji
@@ -329,6 +331,52 @@ class EventManager(
                     guild.channels -= channel
                     callEvent(ChannelDeletedEvent(channel, client.self!!))
                 }
+                "updated_guild_member" -> {
+                    val guild = client.self!!.guilds.find { it.id == event.targetId }!!
+                    val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
+                    user.update()
+                    callEvent(GuildMemberUpdateEvent(client.self!!, guild, user, user.nickname))
+                }
+                "joined_guild" -> {
+                    val guild = client.self!!.guilds.find { it.id == event.targetId }!!
+                    val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
+                    callEvent(GuildUserJoinEvent(client.self!!, guild, user))
+                }
+                "exited_guild" -> {
+                    val guild = client.self!!.guilds.find { it.id == event.targetId }!!
+                    val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
+                    callEvent(GuildUserExitEvent(client.self!!, guild, user))
+                }
+                "self_joined_guild" -> {
+                    val guild = Guild(client, event.extra.get("guild_id").asString)
+                    guild.update()
+                    (client.self!!.guilds as MutableList).add(guild)
+                    callEvent(SelfJoinedGuildEvent(client.self!!, guild))
+                }
+                "self_exited_guild" -> {
+                    val guild = client.self!!.guilds.find { it.id == event.extra.get("guild_id").asString }!!
+                    (client.self!!.guilds as MutableList).remove(guild)
+                    callEvent(SelfExitedGuildEvent(client.self!!, guild))
+                }
+                "added_block_list" -> {
+                    //TODO
+                }
+                "deleted_block_list" -> {
+                    //TODO
+                }
+                "added_role" -> {
+                    //TODO
+                }
+                "deleted_role" -> {
+                    //TODO
+                }
+                "updated_role" -> {
+                    //TODO
+                }
+                "user_updated" -> {
+                    //TODO
+                    //private chat
+                }
             }
         } else if (event.channelType == MessageEvent.ChannelType.GROUP) {
             val channelMessageEvent = Gson().fromJson(json, ChannelMessageEvent::class.java)
@@ -377,11 +425,33 @@ class EventManager(
     init {
         dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("help")
             .executes { context ->
+
                 context.source.sendMessage(
                     dispatcher.getAllUsage(dispatcher.root, context.source, true).joinToString("") { "\n/${it}" }
                 )
                 0
             }
+            .then(RequiredArgumentBuilder.argument<CommandSource?, String?>(
+                "command",
+                StringArgumentType.greedyString()
+            )
+                .executes { context ->
+                    val parseResults: ParseResults<CommandSource> =
+                        dispatcher.parse(StringArgumentType.getString(context, "command"), context.source);
+                    if (parseResults.getContext().getNodes().isEmpty()) {
+                        throw Exception("Command not found.")
+                    } else {
+                        context.source.sendMessage(buildString {
+                            dispatcher.getSmartUsage(parseResults.context.nodes.last().node, context.source)
+                                .forEach {
+                                    append("/" + parseResults.reader.string + it)
+                                    context.source
+                                }
+                        })
+
+                        0
+                    }
+                })
         )
         dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("echo")
             .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("text", StringArgumentType.greedyString())
@@ -442,6 +512,36 @@ class EventManager(
                         0
                     }
                 )
+            )
+        )
+        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("permission")
+            .then(LiteralArgumentBuilder.literal<CommandSource?>("me")
+                .executes {
+                    if (it.source.type == CommandSource.Type.Console) {
+                        it.source.sendMessage("Console has all permissions.")
+                        return@executes 0
+                    }
+                    val pm = it.source.user!!.client.permissionManager
+                    it.source.sendMessage(
+                        buildString {
+                            append("global:\n")
+                            pm.global[it.source.user!!.id]?.forEach {
+                                append("  ${it.key} = ${it.value}\n")
+                            }
+                            if (it.source.channel != null) {
+                                append("this guild:\n")
+                                pm.guild[it.source.user!!.id]?.get(it.source.channel!!.guild.id)?.forEach {
+                                    append("  ${it.key} = ${it.value}\n")
+                                }
+                                append("this channel:\n")
+                                pm.channel[it.source.user!!.id]?.get(it.source.channel!!.id)?.forEach {
+                                    append("  ${it.key} = ${it.value}\n")
+                                }
+                            }
+                        }
+                    )
+                    0
+                }
             )
         )
     }
