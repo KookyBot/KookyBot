@@ -87,7 +87,7 @@ body:
         examples:
           - **Operating System**: macOS Monterey 12.3
           - **Java Version**: Temurin-17.0.1+12
-          - **KookyBot Version (or Commit)**: 0.1.1 (or 5da64db)
+          - **KookyBot Version (or Commit)**: 0.1.2 (or 5da64db)
       value: |
         - **Operating System**:
         - **Java Version**:
