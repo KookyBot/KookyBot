@@ -119,7 +119,7 @@ public class JavaApiTest extends JavaBaseClass {
 
 ## 衍生项目
 
-优秀的衍生项目可以再次得到展示！欢迎把你的项目提交给我。
+优秀的衍生项目可以得到展示的机会！欢迎把你的项目提交给我们！
 
 - [KookyGithub](https://github.com/zly2006/KookyGithub) - 将GithubWebhook的信息同步到Kook
 

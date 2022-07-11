@@ -15,8 +15,15 @@ An SDK to build bot on KOOK (formerly known as KaiHeiLa) for JVM platforms.
 ## Development Plan
 
 - [ ] Complete cache model
-- [ ] Automatic cache model update
+- [X] Automatic cache model update
 - [ ] Stable automatic reconnection of login state machine
+  
+Events: 
+
+- [ ] guild_member_online / guild_member_offline
+- [ ] user_updated
+- [ ] pinned_message / unpinned_message
+- [x] Other events
 
 ## Quick Starting
 
@@ -112,7 +119,7 @@ We look forward to your contributions to this project! You can help us improve o
 
 ## Derived Projects
 
-Nice derived projects will be shown here! You can submit your project to us!
+Excellent derived projects can get a chance to be showcased! You can submit your project to us!
 
 - [KookyGithub](https://github.com/zly2006/KookyGithub) - Sync GitHub webhook messages to KOOK
 
