@@ -18,6 +18,14 @@ body:
         > * 搜索[文档](https://kookybot.rtfd.io)
         > * 在[KOOK 服务器内](https://kook.top/wnWOP9)搜索或提问
 
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: "请选择："
+      options:
+        - label: 我正在着手增加这个功能
+          required: false
+
   - type: textarea
     id: solution-description
     validations:

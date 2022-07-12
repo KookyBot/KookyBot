@@ -18,6 +18,14 @@ body:
         > * Search the [docs](https://kookybot.rtfd.io)
         > * Search or ask in [KOOK Server](https://kook.top/wnWOP9)
 
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: "Please choose if applies:"
+      options:
+        - label: I'm currently working on a adding this feature.
+          required: false
+
   - type: textarea
     id: solution-description
     validations:

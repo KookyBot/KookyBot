@@ -18,6 +18,14 @@ body:
         > * 搜索[文档](https://kookybot.rtfd.io)
         > * 在[KOOK 服务器内](https://kook.top/wnWOP9)搜索或提问
 
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: "请选择："
+      options:
+        - label: 我正在着手修复这个问题
+          required: false
+
   - type: textarea
     id: issue-description
     validations:
@@ -27,8 +35,6 @@ body:
       description: |
         清晰简洁的描述您遇到的错误。
         请告诉我们它是构建时错误还是运行时错误。
-        
-        如果您打算为此问题提交 PR，请在描述中告诉我们。
       value: |
         当我执行 <X> 时，会发生 <Y> 并且我看到以下错误消息：
         
