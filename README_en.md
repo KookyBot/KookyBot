@@ -14,7 +14,7 @@ An SDK to build bot on KOOK (formerly known as KaiHeiLa) for JVM platforms.
 
 ## Development Plan
 
-- [ ] Complete cache model
+- [ ] Complete cache model - Role & Operation APIs
 - [X] Automatic cache model update
 - [ ] Stable automatic reconnection of login state machine
   
