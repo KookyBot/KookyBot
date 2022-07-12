@@ -29,7 +29,7 @@ body:
         Please, explain whether it's a build-time error or a runtime error.
         
         If you intend to submit a PR for this issue, tell us in the description.
-      placeholder: |
+      value: |
         When I do <X>, <Y> happens and I see the following error message:
         
         ```
@@ -39,6 +39,8 @@ body:
         Expected behavior:
         
         When I do <X>, <Z> should happen instead.
+      render: Markdown
+
 
   - type: textarea
     id: reproduction
@@ -49,12 +51,11 @@ body:
       description: |
         Add commands used or steps taken to reproduce the behaviour.
         Include links, references or anything else that will give us more context about the issue you are encountering.
-      placeholder: |
-        e.g: 
-        
+      value: |
         1. Clone, and run `ApiTestKt`
         2. Click on '...'
         3. See error
+      render: Markdown
 
   - type: textarea
     id: logs
