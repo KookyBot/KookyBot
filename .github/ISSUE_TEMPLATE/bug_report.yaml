@@ -19,6 +19,7 @@ body:
         > * Search or ask in [KOOK Server](https://kook.top/wnWOP9)
 
   - type: textarea
+    id: issue-description
     validations:
       required: true
     attributes:
@@ -40,6 +41,7 @@ body:
         When I do <X>, <Z> should happen instead.
 
   - type: textarea
+    id: reproduction
     validations:
       required: true
     attributes:
@@ -55,6 +57,7 @@ body:
         3. See error
 
   - type: textarea
+    id: logs
     attributes:
       label: Relevant log output (if applicable)
       description: |
@@ -63,6 +66,7 @@ body:
       render: Shell
 
   - type: textarea
+    id: kotlin-codes
     attributes:
       label: Relevant Kotlin code (if applicable)
       description: |
@@ -71,6 +75,7 @@ body:
       render: Kotlin
 
   - type: textarea
+    id: java-codes
     attributes:
       label: Relevant Java code (if applicable)
       description: |
@@ -79,6 +84,7 @@ body:
       render: Java
 
   - type: textarea
+    id: environment
     validations:
       required: true
     attributes:
