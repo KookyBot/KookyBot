@@ -1,0 +1,133 @@
+name: Bug 反馈
+description: 创建一个报告帮助我们改进 KookyBot
+title: "[Bug]: "
+labels: ["bug"]
+assignees: zly2006
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您参与反馈问题。
+        
+        > ### 重要！ :warning:
+        > 
+        > issue 专为报告问题以及请求新功能而设。这意味着我们不会在此处接受任何关于使用的问题。如果您打开的 issue 不符合要求，它将被关闭。
+        >
+        > 对于使用上的问题，请参考以下资源：
+        > * 搜索[文档](https://kookybot.rtfd.io)
+        > * 在[KOOK 服务器内](https://kook.top/wnWOP9)搜索或提问
+
+  - type: textarea
+    id: issue-description
+    validations:
+      required: true
+    attributes:
+      label: 问题描述
+      description: |
+        清晰简洁的描述您遇到的错误。
+        请告诉我们它是构建时错误还是运行时错误。
+        
+        如果您打算为此问题提交 PR，请在描述中告诉我们。
+      placeholder: |
+        当我执行 <X> 时，会发生 <Y> 并且我看到以下错误消息：
+        
+        ```
+        <错误信息>
+        ```
+        
+        预期行为：
+        
+        当我执行 <X> 时，应该发生 <Z>。
+
+  - type: textarea
+    id: reproduction
+    validations:
+      required: true
+    attributes:
+      label: 重现
+      description: |
+        添加用于重现行为的命令或采取的步骤。
+        包括链接、参考资料以及其他任何可以帮助我们了解您遇到的问题的内容。
+      placeholder: |
+        例如：
+        
+        1. Clone, 然后运行 `ApiTestKt`
+        2. 点击 '...'
+        3. 看到错误
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志输出（如果有）
+      description: |
+        请复制并粘贴任何相关的日志输出。您的内容会自动被格式化为代码。
+        粘贴详细日志时，请确保删除所有敏感信息。
+      render: Shell
+
+  - type: textarea
+    id: kotlin-codes
+    attributes:
+      label: 相关 Kotlin 代码（如果有）
+      description: |
+        请复制并粘贴可能导致问题的 **Kotlin** 代码。您的内容会自动被格式化为代码。
+        粘贴与登录相关的代码/配置时，请确保删除任何敏感信息。
+      render: Kotlin
+
+  - type: textarea
+    id: java-codes
+    attributes:
+      label: 相关 Java 代码（如果有）
+      description: |
+        请复制并粘贴可能导致问题的 **Java** 代码。您的内容会自动被格式化为代码。
+        粘贴与登录相关的代码/配置时，请确保删除任何敏感信息。
+      render: Java
+
+  - type: textarea
+    id: environment
+    validations:
+      required: true
+    attributes:
+      label: 环境
+      description: |
+        示例：
+          - **操作系统**：macOS Monterey 12.3
+          - **Java 版本**：Temurin-17.0.1+12
+          - **KookyBot 版本 (或 commit 号)**：0.1.2 (或 5da64db)
+      value: |
+        - **操作系统**：
+        - **Java 版本：**：
+        - **KookyBot 版本 (或 commit 号)：**：
+      render: Markdown
+
+  - type: markdown
+    attributes:
+      value: |
+        ---------
+        
+        在您提交本 issue 之前，请确认以下内容：
+        
+        **1. 本问题是否已经被反馈过了？**
+        
+        请确认是否已经有 issue 反馈过了本问题。
+        
+        **2. 确认您提交的是错误报告**
+        
+        请确认您提交的是错误报告，而不是使用上的问题。
+        
+        **3. 确认本错误仍然存在于最新版本的 KookyBot 中**
+        
+        请确认本错误仍然存在于最新版本（或提交）的 KookyBot 中。
+        
+        ---------
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 请确认以下条款
+      options:
+        - label: 我已经查看了[已有 issue](https://github.com/KookyBot/KookyBot/issues) 并确定我提交的问题并没有重复
+          required: true
+        - label: 本 issue 是 bug 反馈
+          required: true
+        - label: 本 bug 在最新版本中仍存在
+          required: true
