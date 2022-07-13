@@ -22,6 +22,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.mojang.brigadier.CommandDispatcher
 import io.github.kookybot.client.Client.RequestType.*
+import io.github.kookybot.client.ResumeStatus.*
 import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.commands.PermissionManager
 import io.github.kookybot.contract.Self
@@ -48,7 +49,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.zip.InflaterInputStream
@@ -85,7 +85,7 @@ class Client (var token : String) {
     private var lastSn = 0
     private var sessionId = ""
     private var resumeTimes = 0
-    var resumeStatus: ResumeStatus = ResumeStatus.None
+    var resumeStatus: ResumeStatus = None
     var voiceWebSocketClient: WebSocketClient? = null
     var pingDelay = 0L
     var status = State.Initialized
@@ -101,10 +101,25 @@ class Client (var token : String) {
     private var pingStart = Calendar.getInstance().timeInMillis
     private var pingThread = Thread {
         while (status != State.FatalError &&
-                status != State.Closed) {
+            status != State.Closed
+        ) {
             try {
                 Thread.sleep(30000)
-                ping()
+                if (resumeStatus != None) continue
+                logger.debug("ping")
+                pingStatus = PingState.Pinging
+                webSocketClient?.send("{\"s\":2,\"sn\":$lastSn}")
+                pingStart = Calendar.getInstance().timeInMillis
+                GlobalScope.launch {
+                    delay(6000)
+                    if (pingStatus == PingState.Pinging) {
+                        pingStatus = PingState.Timeout
+                        logger.error("timeout")
+                        if (status == State.Closed) return@launch
+                        status = State.Disconnected
+                        resumeStatus = First
+                    }
+                }
             } catch (_: Exception) {
             }
         }
@@ -163,23 +178,6 @@ class Client (var token : String) {
         CANCEL_REACTION,
     }
 
-    fun ping() {
-        logger.debug("ping")
-        pingStatus = PingState.Pinging
-        webSocketClient?.send("{\"s\":2,\"sn\":$lastSn}")
-        pingStart = Calendar.getInstance().timeInMillis
-        GlobalScope.launch {
-            delay(6000)
-            if (pingStatus == PingState.Pinging) {
-                pingStatus = PingState.Timeout
-                logger.error("timeout")
-                if (status == State.Closed) return@launch
-                status = State.Disconnected
-                resume()
-            }
-        }
-    }
-
     private fun apiOf(path: String): URI {
         return URI(data.baseApiUrl + path)
     }
@@ -228,8 +226,8 @@ class Client (var token : String) {
             USER_CHAT_LIST -> builder.uri(apiOf("/user-chat/list")).GET()
             USER_CHAT_VIEW -> builder.uri(apiOf("/user-chat/view?chat_code=${values!!["chat_code"]}")).GET()
             CREATE_ASSET -> builder.uri(apiOf("/asset/create"))
-                .header("content-type", "form-data")
-                .POST(postAll(values!!))
+                .header("content-type", "multipart/form-data")
+                .POST(BodyPublishers.ofByteArray(values!!["file"]!! as ByteArray))
             CREATE_CHAT -> builder.uri(apiOf("/user-chat/create"))
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
@@ -266,7 +264,7 @@ class Client (var token : String) {
     @OptIn(ExperimentalStdlibApi::class)
     fun sendRequest(request: HttpRequest): JsonObject {
         val response = httpClient.send(request, BodyHandlers.ofString())
-        println(response.body())
+        logger.debug(response.body())
         val json = Gson().fromJson(response.body(), JsonObject::class.java)
         when (json.get("code").asInt) {
             0 -> {
@@ -306,22 +304,6 @@ class Client (var token : String) {
     }
 
     private suspend fun resume() {
-        logger.info("resuming")
-        for (i in listOf(1, 2)) {
-            try {
-                if (status != State.Disconnected) return
-                webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME)).get("url").asString)
-                webSocketClient!!.connectBlocking()
-                webSocketClient!!.send("{\"s\":4,\"sn\":$lastSn}")
-                delay(6000)
-                if (webSocketClient?.isOpen == true) {
-                    return
-                }
-            } catch (e: Exception) {
-                logger.info("resume failed, retry: $i.", e)
-            }
-        }
-        reconnect()
     }
 
     private fun initWebsocket(url: String): WebSocketClient {
@@ -339,8 +321,8 @@ class Client (var token : String) {
 
             override fun onMessage(message: String) {
                 logger.debug("[Event received] $message")
-                resumeTimes = 0
                 var json = Gson().fromJson(message, JsonObject::class.java)
+                resumeStatus = None
                 when (json.get("s").asInt) {
                     0 -> {
                         lastSn = json.get("sn").asInt
@@ -371,7 +353,8 @@ class Client (var token : String) {
                         logger.debug("pong, delay = $pingDelay ms")
                     }
                     5 -> {
-                        this@Client.reconnect()
+                        resumeStatus = Reconnect
+                        closeBlocking()
                     }
                     6 -> {
                         pingStatus = PingState.Success
@@ -386,9 +369,7 @@ class Client (var token : String) {
                 logger.info("websocket closed, code=$code, reason=$reason")
                 if (status == State.Closed) return
                 status = State.Disconnected
-                GlobalScope.launch {
-                    this@Client.resume()
-                }
+                resumeStatus = First
             }
             override fun onError(ex: java.lang.Exception) {
                 ex.printStackTrace()
@@ -420,7 +401,6 @@ class Client (var token : String) {
                     while (status != State.Connected || self == null) {
                         delay(100)
                     }
-                    ping()
                     return self!!
                 }
             } catch (e: IOException) {
@@ -544,9 +524,11 @@ class Client (var token : String) {
         )
     }
     fun upload(file: File): String {
-        val data = file.readBytes()
-        return sendRequest(requestBuilder(CREATE_ASSET, "file" to data.toString(StandardCharsets.US_ASCII))).get("url").asString
+        var data = file.readBytes()
+        data = "file=".toByteArray(Charsets.US_ASCII) + data
+        return sendRequest(requestBuilder(CREATE_ASSET, "file" to data)).get("url").asString
     }
+
     fun close() {
         sendRequest(requestBuilder(OFFLINE))
         status = State.Closed
@@ -554,7 +536,49 @@ class Client (var token : String) {
         pingThread.interrupt()
         updateJob?.cancel()
     }
+
     fun addCommand(listener: (CommandDispatcher<CommandSource>) -> Unit) {
         listener(eventManager.dispatcher)
+    }
+
+    val reconnectThread = Thread {
+        while (true) {
+            Thread.sleep(1000)
+            if (resumeStatus != None) continue
+            fun resume(): Boolean {
+                webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME)).get("url").asString)
+                webSocketClient!!.connectBlocking()
+                webSocketClient!!.send("{\"s\":4,\"sn\":$lastSn}")
+                Thread.sleep(6000)
+                return webSocketClient?.isOpen == true
+            }
+            when (resumeStatus) {
+                First -> {
+                    logger.error("resume - first")
+                    if (!resume())
+                        resumeStatus = Second
+                }
+                Second -> {
+                    logger.error("resume - first")
+                    if (!resume())
+                        resumeStatus = Second
+                }
+                Reconnect -> {
+                    logger.error("reconnect")
+                    if (webSocketClient?.isClosed != true)
+                        webSocketClient?.closeBlocking()
+                    webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY)).get("url").asString)
+                    Thread.sleep(6000)
+                    if (webSocketClient?.isOpen != true) {
+                        webSocketClient?.close()
+                    }
+                }
+                None -> {}
+            }
+        }
+    }
+
+    init {
+        reconnectThread.start()
     }
 }

@@ -34,6 +34,7 @@ dependencies {
     implementation 'org.yaml:snakeyaml:1.30'
     implementation 'com.mojang:brigadier:1.0.18'
     implementation 'org.jvoicexml:org.jlibrtp:0.2'
+    implementation 'org.apache.directory.server:apacheds-protocol-ntp:2.0.0.AM26'
 
     // kotlin JavaDoc
     dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.7.0")
@@ -63,7 +64,6 @@ compileTestKotlin {
 
 java {
     withSourcesJar()
-    withJavadocJar()
 }
 
 dokkaJavadoc {
@@ -89,7 +89,7 @@ artifacts {
     archives sourcesJar
     //archives generateSourcesJar //sourcesJar
 }
-
+/*
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     setArchivesBaseName(project.name)
@@ -98,3 +98,4 @@ jar {
     }
     from configurations.runtimeClasspath.collect {it.isDirectory() ? it : zipTree(it) }
 }
+*/

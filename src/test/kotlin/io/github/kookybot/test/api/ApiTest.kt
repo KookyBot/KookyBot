@@ -1,12 +1,16 @@
 package io.github.kookybot.test.api
 
+import com.mojang.brigadier.arguments.StringArgumentType
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.builder.RequiredArgumentBuilder
 import io.github.kookybot.client.Client
 import io.github.kookybot.commands.Command
 import io.github.kookybot.commands.CommandContext
-import io.github.kookybot.commands.RequireChannel
-import io.github.kookybot.commands.RequireGuild
+import io.github.kookybot.commands.CommandSource
+import io.github.kookybot.commands.StringListArgumentType
 import io.github.kookybot.events.channel.ChannelMessageEvent
 import io.github.kookybot.message.CardMessage
+import io.github.kookybot.message.ImageMessage
 import io.github.kookybot.message.SelfMessage
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -100,58 +104,71 @@ suspend fun main() {
             }.start()
         }
     })
-    client.eventManager.commands.add(object : Command("test") {
-        override fun onExecute(context: CommandContext) {
-            when (context.args[0]) {
-                "add_channel" -> {
-                    context.channel!!.sendMessage(context.channel!!.guild.createTextChannel(context.args[1]).id)
-                }
-            }
-        }
-    })
-    client.eventManager.addCommand(object : Command("vote") {
-        var list: List<MutableList<String>> = listOf()
-        var selfMessage: SelfMessage? = null
-        var context: CommandContext? = null
-        fun CardMessage.MessageScope.card() {
-            Card {
-                HeaderModule(PlainTextElement(context!!.args[0]))
-                for (i in (1 until context!!.args.size)) {
-                    SectionModule(
-                        text = MarkdownElement(context!!.args[i]),
-                        accessory = ButtonElement(
-                            text = PlainTextElement("选择"),
-                        ) {
-                            with(it) {
-                                if (list.map { it.contains(sender.id) }.contains(true)) {
-                                    channel!!.sendMessage("voted", sender.atGuild(channel!!.guild))
-                                    return@with
+    client.addCommand { dispatcher ->
+        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("vote")
+            .requires { it.hasPermission("kooky.operator") }
+            .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("name", StringArgumentType.word())
+                .then(RequiredArgumentBuilder.argument<CommandSource?, MutableList<String>?>("option",
+                    StringListArgumentType.stringList())
+                    .executes {
+                        val name = StringArgumentType.getString(it, "name")
+                        val args = StringListArgumentType.getStringList(it, "option")
+
+                        val list: List<MutableList<String>> = (0 until args.size).map { mutableListOf() }
+                        var selfMessage: SelfMessage? = null
+                        fun CardMessage.MessageScope.card() {
+                            Card {
+                                HeaderModule(PlainTextElement(name))
+                                for (i in (0 until args.size)) {
+                                    SectionModule(
+                                        text = MarkdownElement(args[i]),
+                                        accessory = ButtonElement(
+                                            text = PlainTextElement("选择"),
+                                        ) {
+                                            with(it) {
+                                                if (list.map { it.contains(sender.id) }.contains(true)) {
+                                                    channel!!.sendMessage("voted", sender.atGuild(channel!!.guild))
+                                                    return@with
+                                                }
+                                                list[i].add(sender.id)
+                                                channel!!.sendMessage("ok", sender.atGuild(channel!!.guild))
+                                                selfMessage!!.edit(CardMessage(client) {
+                                                    card()
+                                                }.content())
+                                            }
+                                        }
+                                    )
+                                    ContextModule {
+                                        MarkdownElement("> ${
+                                            list[i].firstOrNull()?.let { "(met)$it(met)" } ?: ""
+                                        }等${list[i].size}人选择了此选项")
+                                    }
                                 }
-                                list[i].add(sender.id)
-                                channel!!.sendMessage("ok", sender.atGuild(channel!!.guild))
-                                selfMessage!!.edit(CardMessage(client) {
-                                    card()
-                                }.content())
                             }
                         }
-                    )
-                    ContextModule {
-                        MarkdownElement("> ${list[i].firstOrNull()?.let { "(met)$it(met)" } ?: ""}等${list[i].size}人选择了此选项")
+
+                        val card = CardMessage(client) {
+                            card()
+                        }
+                        selfMessage = it.source.channel!!.sendMessage(card)
+
+                        0
                     }
+                )
+            )
+        )
+        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("kooky")
+            .executes {
+                it.source.channel?.let {
+                    ImageMessage(
+                        client = client,
+                        file = File("data/kooky.png")
+                    ).send(it)
                 }
+                0
             }
-        }
-        @RequireChannel(id = "7118025577525135")
-        @RequireGuild(id = "9958078697384496")
-        override fun onExecute(context: CommandContext) {
-            list = (0 until  context.args.size).map { mutableListOf() }
-            this.context = context
-            val card = CardMessage(client) {
-                card()
-            }
-            selfMessage = context.channel!!.sendMessage(card)
-        }
-    })
+        )
+    }
     while (true) {
         client.eventManager.parseCommand(readln())
     }

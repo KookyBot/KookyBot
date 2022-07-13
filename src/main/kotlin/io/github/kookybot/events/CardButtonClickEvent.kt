@@ -6,6 +6,8 @@ import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.contract.User
 
 class CardButtonClickEvent (
+    @field:Transient
+    override var self: Self,
     var value: String,
     @Transient
     var channel: TextChannel?,
@@ -19,7 +21,6 @@ class CardButtonClickEvent (
     sid: String,
     timestamp: String,
     extra: JsonObject = JsonObject(),
-    override val self: Self
 ): MessageEvent(self ,_channelType, _type, targetId, authorId, content, sid, timestamp, extra) {
 
 }

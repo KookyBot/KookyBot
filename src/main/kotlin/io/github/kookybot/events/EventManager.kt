@@ -41,6 +41,7 @@ import io.github.kookybot.utils.Emoji
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.cancel
+import java.util.*
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 import io.github.kookybot.events.Listener as Listener1
@@ -79,7 +80,7 @@ class EventManager(
     fun parseCommand(consoleCommand: String) {
         if (consoleCommand == "") return
         try {
-            dispatcher.execute(consoleCommand, CommandSource())
+            dispatcher.execute(consoleCommand, CommandSource(timestamp = Calendar.getInstance().timeInMillis))
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -160,12 +161,14 @@ class EventManager(
             is ChannelMessageEvent -> CommandSource(
                 type = CommandSource.Type.Channel,
                 channel = event.channel,
-                user = event.sender
+                user = event.sender,
+                timestamp = event.timestamp.toLong()
             )
             is DirectMessageEvent -> CommandSource(
                 type = CommandSource.Type.Private,
                 user = event.sender,
-                private = event.sender
+                private = event.sender,
+                timestamp = event.timestamp.toLong()
             )
             else -> throw Exception("invalid type")
         }
@@ -207,8 +210,12 @@ class EventManager(
         classListeners.forEach {
             it.javaClass.methods.forEach { method ->
                 if (method.annotations.find { it.annotationClass == EventHandler::class } != null) {
-                    if (method.parameterTypes[0] == T::class.java) {
-                        method.invoke(it, event)
+                    try {
+                        if (method.parameterTypes[0] == T::class.java) {
+                            method.invoke(it, event)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
             }
@@ -256,6 +263,7 @@ class EventManager(
                     channelPostReactionEvent.sender = client.self!!.getGuildUser(event.extra.get("user_id").asString,
                         channelPostReactionEvent.guild.id)!!
                     channelPostReactionEvent.targetId = event.extra.get("msg_id").asString
+                    channelPostReactionEvent.self = client.self!!
                     callEvent(channelPostReactionEvent)
                 }
                 "deleted_reaction" -> {
@@ -270,6 +278,7 @@ class EventManager(
                     channelCancelReactionEvent.sender = client.self!!.getGuildUser(event.extra.get("user_id").asString,
                         channelCancelReactionEvent.guild.id)!!
                     channelCancelReactionEvent.targetId = event.extra.get("msg_id").asString
+                    channelCancelReactionEvent.self = client.self!!
                     callEvent(channelCancelReactionEvent)
                 }
                 "message_btn_click" -> {
@@ -279,6 +288,7 @@ class EventManager(
                     cardButtonClickEvent.sender = client.self!!.getUser(event.extra.get("user_id").asString)
                     cardButtonClickEvent.targetId = event.extra.get("msg_id").asString
                     cardButtonClickEvent.value = event.extra.get("value").asString
+                    cardButtonClickEvent.self = client.self!!
                     callEvent(cardButtonClickEvent)
                 }
                 "private_added_reaction" -> {
@@ -290,6 +300,7 @@ class EventManager(
                         event.extra.get("emoji").asJsonObject.get("id").asString,
                         event.extra.get("emoji").asJsonObject.get("name").asString
                     )
+                    directPostReactionEvent.self = client.self!!
                     callEvent(directPostReactionEvent)
                 }
                 "private_deleted_reaction" -> {
@@ -301,6 +312,7 @@ class EventManager(
                         event.extra.get("emoji").asJsonObject.get("id").asString,
                         event.extra.get("emoji").asJsonObject.get("name").asString
                     )
+                    directCancelReactionEvent.self = client.self!!
                     callEvent(directCancelReactionEvent)
                 }
                 "updated_guild" -> {
@@ -543,6 +555,14 @@ class EventManager(
                     0
                 }
             )
+        )
+        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("ping")
+            .executes {
+                it.source.sendMessage(
+                    "pong, delay is ${Calendar.getInstance().timeInMillis - it.source.timestamp}ms"
+                )
+                0
+            }
         )
     }
 }

@@ -2,7 +2,8 @@
 
 **简体中文** | [English](README_en.md)
 
-[![](https://img.shields.io/github/contributors/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/graphs/contributors)
+[![Docs](https://readthedocs.org/projects/kookybot/badge/?version=latest)](https://kookybot.readthedocs.io/)
+[![Contributors](https://img.shields.io/github/contributors/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/graphs/contributors)
 [![github stars](https://img.shields.io/github/stars/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/stargazers)
 ![Build Status](https://www.travis-ci.org/KookyBot/KookyBot.svg?branch=master)
 [![KookyBot](https://www.kaiheila.cn/api/v3/badge/guild?guild_id=6435808750354421&style=3)](https://kaihei.co/wnWOP9)

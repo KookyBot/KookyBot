@@ -25,7 +25,7 @@ import io.github.kookybot.utils.Emoji
 
 open class MessageEvent(
     @field:Transient
-    override val self: Self,
+    override var self: Self,
     @field:SerializedName("channel_type")
     private var _channelType: String,
     @field:SerializedName("type")

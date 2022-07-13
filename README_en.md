@@ -2,6 +2,7 @@
 
 [简体中文](README.md) | **English**
 
+[![Docs](https://readthedocs.org/projects/kookybot/badge/?version=latest)](https://kookybot.readthedocs.io/)
 [![](https://img.shields.io/github/contributors/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/graphs/contributors)
 [![github stars](https://img.shields.io/github/stars/KookyBot/KookyBot)](https://github.com/KookyBot/KookyBot/stargazers)
 ![Build Status](https://www.travis-ci.org/KookyBot/KookyBot.svg?branch=master)

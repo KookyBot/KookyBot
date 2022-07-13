@@ -26,5 +26,5 @@ class FileMessage(client: Client, quote: String? = null, src: String? = null, fi
         return source;
     }
 
-    private val source = (src ?: client.sendRequest(client.requestBuilder(Client.RequestType.CREATE_ASSET,"file" to file!!.readBytes())).get("url").asString)!!
+    private val source = src ?: client.upload(file!!)
 }
