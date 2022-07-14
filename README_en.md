@@ -17,7 +17,7 @@ An SDK to build bot on KOOK (formerly known as KaiHeiLa) for JVM platforms.
 
 - [ ] Complete cache model - Role & Operation APIs
 - [X] Automatic cache model update
-- [ ] Stable automatic reconnection of login state machine
+- [x] Stable automatic reconnection of login state machine
   
 Events: 
 
@@ -28,79 +28,11 @@ Events:
 
 ## Quick Starting
 
-1. Go to the [JitPack page](https://jitpack.io/#KookyBot/KookyBot) of our project and import the newest version with tools like maven (recommended), or clone this repo and run `gradle jar`, then import manually the generated jar (not recommended).
-2. Write your first line of code
+Please see the [Docs](https://kookybot.readthedocs.io/zh_CN/latest/quick-start/index.html)
 
-Kotlin:
+[Kotlin Demo](https://github.com/KookyBot/KookyBotDemoKt)
 
-```kotlin
-import io.github.kookybot.client.Client
-import io.github.kookybot.events.channel.ChannelMessageEvent
-
-fun main() {
-    val client = Client("token")
-    val self = client.start()
-    val logger = LoggerFactory.getLogger("ApiTest")
-    client.eventManager.addListener<ChannelMessageEvent> {
-        if (content.contains("hello")) {
-            logger.info("hello")
-            channel.sendCardMessage {
-                Card {
-                    HeaderModule(PlainTextElement("Hello"))
-                    Divider()
-                }
-                Card {
-                    SectionModule(
-                        text = MarkdownElement("**Click Me!**"),
-                        accessory = ButtonElement(
-                            text = PlainTextElement("hi"),
-                            onclick = {
-                                it.channel?.sendMessage("hi~")
-                            })
-                    )
-                }
-            }
-        }
-    }
-    awaitCancellation()
-}
-```
-
-Java:
-
-```java
-package io.github.kookybot.test.api;
-
-import io.github.kookybot.JavaBaseClass;
-import io.github.kookybot.client.Client;
-import io.github.kookybot.contract.Self;
-import io.github.kookybot.events.channel.ChannelMessageEvent;
-import io.github.kookybot.events.EventHandler;
-import io.github.kookybot.events.Listener;
-import io.github.kookybot.message.CardMessage;
-
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStreamReader;
-
-public class JavaApiTest extends JavaBaseClass {
-    static public class MyListener implements Listener {
-        @EventHandler
-        public void onChannelMessage(ChannelMessageEvent event) {
-            System.out.println(event.getContent());
-        }
-    }
-    public static void main(String[] args) throws FileNotFoundException {
-        String token = new BufferedReader(new InputStreamReader(new FileInputStream("data/token.txt"))).lines().toList().get(0);
-        Client client = new Client(token);
-        Self self = utils.connectWebsocket(client);
-        client.getEventManager().addClassListener(new MyListener());
-    }
-}
-```
-
-4. Compile and run! Now, invite your bot to your server and send `hello`
+[Java Demo](https://github.com/KookyBot/KookyBotDemoJava)
 
 ## Open Source License Notation
 
