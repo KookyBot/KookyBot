@@ -10,15 +10,29 @@ class PermissionTreeNode(
     val parent: PermissionTreeNode? = null,
     val children: MutableList<PermissionTreeNode> = mutableListOf()
 ) {
-    val root get() = let {
-        var cur = this
-        while (cur.parent != null) cur = cur.parent!!
-        return@let cur
-    }
+    val root
+        get() = let {
+            var cur = this
+            while (cur.parent != null) cur = cur.parent!!
+            return@let cur
+        }
+
     fun addChild(name: String): PermissionTreeNode {
         val node = PermissionTreeNode(name = name, parent = this)
         children.add(node)
         return node
+    }
+
+    fun printChildren(indent: Int): String {
+        val prefix = (1..indent).map { ' ' }.joinToString("");
+        return buildString {
+            append(prefix)
+            append(name)
+            append("\n")
+            for (child in children) {
+                append(child.printChildren(indent + 1))
+            }
+        }
     }
 }
 
@@ -29,6 +43,10 @@ class PermissionManager(
     private val nodes = mutableMapOf("root" to root)
     var configFile: File = File("data/perm.json")
     var json: JsonObject
+
+    fun printAll(node: PermissionTreeNode = root): String {
+        return node.printChildren(0)
+    }
 
     fun searchNode(perm: String): PermissionTreeNode? = nodes[perm]
 
