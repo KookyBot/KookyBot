@@ -56,7 +56,9 @@ val launcher = object : Lanucher {
 
 suspend fun main() {
     val token = File("data/token.txt").readText()
-    val client = Client(token)
+    val client = Client(token) {
+        withDefaultCommands()
+    }
     val self = client.start()
     while (true) {
         val cmd = readln()

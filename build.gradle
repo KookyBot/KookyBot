@@ -1,16 +1,11 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.7.0'
     id "org.jetbrains.dokka" version "1.7.0"
-    id 'application'
     id 'maven-publish'
 }
 
 group property('group')
 version property('version')
-
-application {
-    mainClass.set('io.github.kookybot.LanucherKt')
-}
 
 repositories {
     mavenCentral()
@@ -87,14 +82,13 @@ task generateJavadoc(type: Jar, dependsOn: dokkaJavadoc) {
 artifacts {
     archives generateJavadoc //javadocJar
     archives sourcesJar
-    //archives generateSourcesJar //sourcesJar
 }
 /*
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     setArchivesBaseName(project.name)
     manifest {
-        attributes 'Main-Class': 'io.github.kookybot.LanucherKt'
+        attributes 'Main-Class': 'io.github.kookybot.LauncherKt'
     }
     from configurations.runtimeClasspath.collect {it.isDirectory() ? it : zipTree(it) }
 }

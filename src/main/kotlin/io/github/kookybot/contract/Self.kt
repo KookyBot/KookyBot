@@ -62,7 +62,7 @@ class Self(
     }
 
     fun getGuildUser(id: String, guild: String): GuildUser? {
-        return guilds.firstOrNull { it.id == guild }?.users?.firstOrNull { it.id == id }
+        return guilds.firstOrNull { it.id == guild }?.getGuildUser(id)
     }
 
     internal fun updatePrivateChatUser(userId: String): PrivateChatUser {

@@ -21,10 +21,15 @@ package io.github.kookybot.client
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.ParseResults
+import com.mojang.brigadier.arguments.StringArgumentType
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.builder.RequiredArgumentBuilder
 import io.github.kookybot.client.Client.RequestType.*
 import io.github.kookybot.client.ResumeStatus.*
 import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.commands.PermissionManager
+import io.github.kookybot.commands.UserArgumentType
 import io.github.kookybot.contract.Self
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.contract.User
@@ -55,6 +60,7 @@ import java.util.zip.InflaterInputStream
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.jvm.optionals.getOrNull
+import kotlin.system.exitProcess
 
 enum class State {
     Initialized,
@@ -78,7 +84,7 @@ enum class ResumeStatus {
     Reconnect,
 }
 
-class Client (var token : String) {
+class Client(var token: String, var configure: (Client.() -> Unit)? = null) {
     private val logger = LoggerFactory.getLogger(Client::class.java)
     private val context: CoroutineContext = EmptyCoroutineContext
     private val debug = true
@@ -104,28 +110,23 @@ class Client (var token : String) {
             status != State.Closed
         ) {
             try {
-                Thread.sleep(30000)
                 if (resumeStatus != None) continue
+                Thread.sleep(30000)
                 logger.debug("ping")
                 pingStatus = PingState.Pinging
                 webSocketClient?.send("{\"s\":2,\"sn\":$lastSn}")
                 pingStart = Calendar.getInstance().timeInMillis
-                GlobalScope.launch {
-                    delay(6000)
-                    if (pingStatus == PingState.Pinging) {
-                        pingStatus = PingState.Timeout
-                        logger.error("timeout")
-                        if (status == State.Closed) return@launch
-                        status = State.Disconnected
-                        resumeStatus = First
-                    }
+                while (pingStatus == PingState.Pinging && Calendar.getInstance().timeInMillis < pingStart + 6000) {
+                }
+                if (Calendar.getInstance().timeInMillis >= pingStart + 6000) {
+                    logger.error("ping timeout")
+                    pingStatus = PingState.Timeout
+                    resumeStatus = First
+                    status = State.Disconnected
                 }
             } catch (_: Exception) {
             }
         }
-    }
-    init {
-        pingThread.start()
     }
 
     /**
@@ -268,7 +269,7 @@ class Client (var token : String) {
         val json = Gson().fromJson(response.body(), JsonObject::class.java)
         when (json.get("code").asInt) {
             0 -> {
-                return try{
+                return try {
                     if (json.has("items") && json.get("items").isJsonArray && !request.uri().query.contains("page")) {
                         val meta = json.get("meta").asJsonObject
                         val total = meta.get("page_total").asInt
@@ -288,8 +289,7 @@ class Client (var token : String) {
                         }
                     }
                     json.get("data").asJsonObject
-                }
-                catch (e: Exception) {
+                } catch (e: Exception) {
                     if (json.has("data") && json.get("data").isJsonArray)
                         JsonObject()
                     else
@@ -339,9 +339,9 @@ class Client (var token : String) {
                             }
                             40101 -> throw Error("token无效，请使用正确的token")
                             40102 -> throw Error("token无效，请使用正确的token")
-                            40103 -> this@Client.reconnect()
-                            40107 -> this@Client.reconnect()
-                            40108 -> this@Client.reconnect()
+                            40103 -> resumeStatus = Reconnect
+                            40107 -> resumeStatus = Reconnect
+                            40108 -> resumeStatus = Reconnect
                             else -> {
                                 throw Exception("KOOK login failed: code is $code\n  @see <https://developer.kookapp.cn/doc/websocket>")
                             }
@@ -366,26 +366,22 @@ class Client (var token : String) {
             }
 
             override fun onClose(code: Int, reason: String, remote: Boolean) {
+                if (code == 1002) {
+                    logger.error("invalid frame, closed.")
+                    status = State.Disconnected
+                    resumeStatus = Reconnect
+                    return
+                }
                 logger.info("websocket closed, code=$code, reason=$reason")
                 if (status == State.Closed) return
+                if (resumeStatus != None) return
                 status = State.Disconnected
                 resumeStatus = First
             }
+
             override fun onError(ex: java.lang.Exception) {
                 ex.printStackTrace()
             }
-        }
-    }
-
-    fun reconnect() {
-        logger.info("reconnecting")
-        webSocketClient!!.closeBlocking()
-        sessionId = ""
-        lastSn = -1
-        self = null
-        GlobalScope.coroutineContext.cancel(CancellationException("reconnecting"))
-        GlobalScope.launch {
-            this@Client.connect()
         }
     }
 
@@ -405,10 +401,9 @@ class Client (var token : String) {
                 }
             } catch (e: IOException) {
                 status = State.FatalError
-                e.printStackTrace()
+                logger.error("websocket connect failed, reconnecting in 5 seconds...", e)
             }
             delay(5000)
-            logger.error("websocket connect failed, reconnecting in 5 seconds...")
         }
     }
 
@@ -452,7 +447,7 @@ class Client (var token : String) {
             getWhSelf()
         }
         updateJob = GlobalScope.launch {
-         //   updatableList.forEach { it.update() }
+            //   updatableList.forEach { it.update() }
             delay(30 * 1000)
         }
         eventManager.callEvent(SelfOnlineEvent(self))
@@ -481,7 +476,8 @@ class Client (var token : String) {
         content: String,
         quote: String? = null
     ): SelfMessage {
-        val ret = sendRequest(requestBuilder(SEND_CHANNEL_MESSAGE,
+        val ret = sendRequest(requestBuilder(
+            SEND_CHANNEL_MESSAGE,
             "type" to type,
             "target_id" to target.id,
             "temp_target_id" to tempTarget,
@@ -497,6 +493,7 @@ class Client (var token : String) {
             content = content
         )
     }
+
     fun sendUserMessage(
         type: Int = 9,
         target: User,
@@ -508,7 +505,8 @@ class Client (var token : String) {
             sendRequest(requestBuilder(CREATE_CHAT, "target_id" to target.id))
             self!!.updatePrivateChatUser(target.id)
         }
-        val ret = sendRequest(requestBuilder(SEND_PRIVATE_MESSAGE,
+        val ret = sendRequest(requestBuilder(
+            SEND_PRIVATE_MESSAGE,
             "type" to type,
             "target_id" to target.id,
             "nonce" to nonce,
@@ -523,6 +521,7 @@ class Client (var token : String) {
             content = content
         )
     }
+
     fun upload(file: File): String {
         var data = file.readBytes()
         data = "file=".toByteArray(Charsets.US_ASCII) + data
@@ -542,15 +541,93 @@ class Client (var token : String) {
     }
 
     val reconnectThread = Thread {
-        while (true) {
+        while (status != State.FatalError &&
+            status != State.Closed
+        ) {
             Thread.sleep(1000)
-            if (resumeStatus != None) continue
+            if (resumeStatus == None) continue
             fun resume(): Boolean {
-                webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME)).get("url").asString)
-                webSocketClient!!.connectBlocking()
-                webSocketClient!!.send("{\"s\":4,\"sn\":$lastSn}")
-                Thread.sleep(6000)
-                return webSocketClient?.isOpen == true
+                try {
+                    webSocketClient = object :
+                        WebSocketClient(URI((sendRequest(requestBuilder(GATEWAY_RESUME)).get("url").asString)),
+                            mapOf("Authorization" to "Bot $token")) {
+                        override fun onOpen(handshakedata: ServerHandshake) {
+                            logger.debug("websocket opened: http status=${handshakedata.httpStatus}")
+                            send("{\"s\":4,\"sn\":$lastSn}")
+                        }
+
+                        override fun onMessage(bytes: ByteBuffer?) {
+                            if (bytes == null) return
+                            onMessage(
+                                InflaterInputStream(bytes.array().inputStream()).bufferedReader().readText()
+                            )
+                        }
+
+                        override fun onMessage(message: String) {
+                            logger.debug("[Event received] $message")
+                            var json = Gson().fromJson(message, JsonObject::class.java)
+                            resumeStatus = None
+                            when (json.get("s").asInt) {
+                                0 -> {
+                                    lastSn = json.get("sn").asInt
+                                    json = json["d"].asJsonObject
+                                    eventManager.callEventRaw(json)
+                                }
+                                1 -> {
+                                    when (val code = json["d"].asJsonObject["code"].asInt) {
+                                        0 -> {
+                                            logger.info("hello received: ok")
+                                            status = State.Connected
+                                            sessionId = json.get("d").asJsonObject.get("session_id").asString
+                                            self = Self(this@Client)
+                                        }
+                                        40101 -> throw Error("token无效，请使用正确的token")
+                                        40102 -> throw Error("token无效，请使用正确的token")
+                                        40103 -> resumeStatus = Reconnect
+                                        40107 -> resumeStatus = Reconnect
+                                        40108 -> resumeStatus = Reconnect
+                                        else -> {
+                                            throw Exception("KOOK login failed: code is $code\n  @see <https://developer.kookapp.cn/doc/websocket>")
+                                        }
+                                    }
+                                }
+                                3 -> {
+                                    pingDelay = Calendar.getInstance().timeInMillis - pingStart
+                                    pingStatus = PingState.Success
+                                    logger.debug("pong, delay = $pingDelay ms")
+                                }
+                                5 -> {
+                                    resumeStatus = Reconnect
+                                    closeBlocking()
+                                }
+                                6 -> {
+                                    pingStatus = PingState.Success
+                                    status = State.Connected
+                                    sessionId = json.get("d").asJsonObject.get("session_id").asString
+                                    logger.info("resume ok!")
+                                }
+                            }
+                        }
+
+                        override fun onClose(code: Int, reason: String, remote: Boolean) {
+                            logger.info("websocket closed, code=$code, reason=$reason")
+                            if (status == State.Closed) return
+                            if (resumeStatus != None) return
+                            status = State.Disconnected
+                            resumeStatus = First
+                            // TODO: 官方的ws协议错误
+                        }
+
+                        override fun onError(ex: java.lang.Exception) {
+                            ex.printStackTrace()
+                        }
+                    }
+                    webSocketClient!!.connectBlocking(6000, TimeUnit.MILLISECONDS)
+                    return webSocketClient?.isOpen == true
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    return false
+                }
             }
             when (resumeStatus) {
                 First -> {
@@ -564,13 +641,28 @@ class Client (var token : String) {
                         resumeStatus = Second
                 }
                 Reconnect -> {
-                    logger.error("reconnect")
-                    if (webSocketClient?.isClosed != true)
-                        webSocketClient?.closeBlocking()
-                    webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY)).get("url").asString)
-                    Thread.sleep(6000)
-                    if (webSocketClient?.isOpen != true) {
-                        webSocketClient?.close()
+                    while (true) {
+                        try {
+                            logger.error("reconnect")
+                            if (webSocketClient?.isClosed != true)
+                                webSocketClient?.close()
+                            status = State.Connecting
+                            webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY)).get("url").asString)
+                            webSocketClient!!.connectBlocking(6000, TimeUnit.MILLISECONDS)
+                            if (webSocketClient?.isOpen != true) {
+                                status = State.Disconnected
+                                resumeStatus = Reconnect
+                                webSocketClient?.closeBlocking()
+                            }
+                            status = State.Connected
+                            resumeStatus = None
+                            pingStatus = PingState.Success
+                            lastSn = 0
+                            break
+                        } catch (e: Exception) {
+                            logger.error("Reconnecting after 5 seconds.", e)
+                            Thread.sleep(5000)
+                        }
                     }
                 }
                 None -> {}
@@ -578,7 +670,155 @@ class Client (var token : String) {
         }
     }
 
+    fun withDefaultCommands() {
+        eventManager.dispatcher.run {
+            register(LiteralArgumentBuilder.literal<CommandSource?>("help")
+                .executes { context ->
+
+                    context.source.sendMessage(
+                        getAllUsage(root, context.source, true).joinToString("") { "\n/${it}" }
+                    )
+                    0
+                }
+                .then(RequiredArgumentBuilder.argument<CommandSource?, String?>(
+                    "command",
+                    StringArgumentType.greedyString()
+                )
+                    .executes { context ->
+                        val parseResults: ParseResults<CommandSource> =
+                            parse(StringArgumentType.getString(context, "command"), context.source);
+                        if (parseResults.getContext().getNodes().isEmpty()) {
+                            throw Exception("Command not found.")
+                        } else {
+                            context.source.sendMessage(buildString {
+                                getSmartUsage(parseResults.context.nodes.last().node, context.source)
+                                    .forEach {
+                                        append("/" + parseResults.reader.string + it)
+                                        context.source
+                                    }
+                            })
+
+                            0
+                        }
+                    })
+            )
+            register(LiteralArgumentBuilder.literal<CommandSource?>("echo")
+                .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("text",
+                    StringArgumentType.greedyString())
+                    .executes {
+                        it.source.sendMessage(StringArgumentType.getString(it, "text"))
+                        0
+                    }
+                )
+            )
+            register(LiteralArgumentBuilder.literal<CommandSource?>("stop")
+                .requires { it.hasPermission("kooky.owner") }
+                .executes {
+                    this@Client.close()
+                    GlobalScope.coroutineContext.cancel()
+                    exitProcess(0)
+                }
+            )
+            register(LiteralArgumentBuilder.literal<CommandSource?>("setowner")
+                .requires { it.hasPermission("kooky.owner") }
+                .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("uid", UserArgumentType.id())
+                    .executes {
+                        this@Client.permissionManager.setPermission(
+                            perm = "kooky.owner",
+                            user = UserArgumentType.getId(it, "uid"),
+                            value = true
+                        )
+                        it.source.sendMessage("Set owner")
+                        0
+                    }
+                )
+            )
+            register(LiteralArgumentBuilder.literal<CommandSource?>("op")
+                .requires { it.hasPermission("kooky.operator") }
+                .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("scope", StringArgumentType.word())
+                    .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("name", UserArgumentType.id())
+                        .executes {
+                            val name = UserArgumentType.getId(it, "name")
+                            when (StringArgumentType.getString(it, "scope")) {
+                                "global" -> this@Client.permissionManager.setPermission(
+                                    perm = "kooky.operator",
+                                    user = name,
+                                    value = true
+                                )
+                                "channel" -> this@Client.permissionManager.setPermission(
+                                    perm = "kooky.operator",
+                                    user = name,
+                                    channelId = it.source.channel!!.id,
+                                    value = true
+                                )
+                                "guild" -> this@Client.permissionManager.setPermission(
+                                    perm = "kooky.operator",
+                                    user = name,
+                                    guildId = it.source.channel!!.guild.id,
+                                    value = true
+                                )
+                            }
+                            it.source.sendMessage("Oped")
+                            0
+                        }
+                    )
+                )
+            )
+            register(LiteralArgumentBuilder.literal<CommandSource?>("permission")
+                .then(LiteralArgumentBuilder.literal<CommandSource?>("me")
+                    .executes {
+                        if (it.source.type == CommandSource.Type.Console) {
+                            it.source.sendMessage("Console has all permissions.")
+                            return@executes 0
+                        }
+                        val pm = it.source.user!!.client.permissionManager
+                        it.source.sendMessage(
+                            buildString {
+                                append("global:\n")
+                                pm.global[it.source.user!!.id]?.forEach {
+                                    append("  ${it.key} = ${it.value}\n")
+                                }
+                                if (it.source.channel != null) {
+                                    append("this guild:\n")
+                                    pm.guild[it.source.user!!.id]?.get(it.source.channel!!.guild.id)?.forEach {
+                                        append("  ${it.key} = ${it.value}\n")
+                                    }
+                                    append("this channel:\n")
+                                    pm.channel[it.source.user!!.id]?.get(it.source.channel!!.id)?.forEach {
+                                        append("  ${it.key} = ${it.value}\n")
+                                    }
+                                }
+                            }
+                        )
+                        0
+                    }
+                )
+            )
+            register(LiteralArgumentBuilder.literal<CommandSource?>("ping")
+                .executes {
+                    it.source.sendMessage(
+                        "pong, delay is ${Calendar.getInstance().timeInMillis - it.source.timestamp}ms"
+                    )
+                    0
+                }
+            )
+        }
+    }
+
+    fun withOwner(id: String) {
+        if (!permissionManager.hasPermission("kooky.owner", id)) {
+            permissionManager.setPermission(
+                perm = "kooky.owner",
+                user = id,
+                value = true
+            )
+        }
+    }
+
+
     init {
+        pingThread.start()
         reconnectThread.start()
+        configure?.let { it() }
     }
 }

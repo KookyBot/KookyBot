@@ -41,7 +41,7 @@ public class JavaApiTest extends JavaBaseClass {
     }
     public static void main(String[] args) throws FileNotFoundException {
         String token = new BufferedReader(new InputStreamReader(new FileInputStream("data/token.txt"))).lines().toList().get(0);
-        Client client = new Client(token);
+        Client client = new Client(token, null);
         Self self = utils.connectWebsocket(client);
         client.getEventManager().addClassListener(new MyListener());
     }

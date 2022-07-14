@@ -74,15 +74,16 @@ class Guild(
 
     @field:Transient
     var categories: List<Category> = listOf()
-    private var lazyUsers: Lazy<List<GuildUser>> = lazy {
+    var lazyUsers: MutableMap<String, Lazy<GuildUser>> =
         client.sendRequest(client.requestBuilder(Client.RequestType.GUILD_USER_LIST, "guild_id" to id))
             .get("items").asJsonArray.map { it.asJsonObject.get("id").asString }.map {
-                val user = GuildUser(client, it, this@Guild)
-                user.update()
-                return@map user
-            }.toList()
-    }
-    val users get() = lazyUsers.value
+                it to lazy {
+                    val user = GuildUser(client, it, this@Guild)
+                    user.update()
+                    return@lazy user
+                }
+            }.toMap().toMutableMap()
+
     @field:DontUpdate
     var roleMap: Map<Int, GuildRole> = mapOf()
 
@@ -99,15 +100,19 @@ class Guild(
             .filter { !it.get("is_category").asBoolean }
             .filter { !channels.map { it.id }.contains(it.get("id").asString) }
             .map {
-            val id = it.get("id").asString
-            val channel = when (it.get("type").asInt) {
-                1 -> TextChannel(client, id, this@Guild)
-                2 -> VoiceChannel(client, id, this@Guild)
-                else -> throw Exception("Invalid channel type.")
-            }
-            channel.update()
-            return@map channel
-        }
+                val id = it.get("id").asString
+                val channel = when (it.get("type").asInt) {
+                    1 -> TextChannel(client, id, this@Guild)
+                    2 -> VoiceChannel(client, id, this@Guild)
+                    else -> throw Exception("Invalid channel type.")
+                }
+                try {
+                    channel.update()
+                    return@map channel
+                } catch (e: Exception) {
+                    return@map null
+                }
+            }.filterNotNull()
         defaultChannel = channels.firstOrNull { it.id == jsonElement.asJsonObject.get("default_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
         welcomeChannel = channels.firstOrNull { it.id == jsonElement.asJsonObject.get("welcome_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
     }
@@ -202,7 +207,6 @@ class Guild(
         (categories as MutableList).add(category)
         return category
     }
-    fun getGuildUser(userId: String): GuildUser? {
-        return client.self!!.getGuildUser(userId, id)
-    }
+
+    fun getGuildUser(userId: String) = lazyUsers[userId]?.value
 }

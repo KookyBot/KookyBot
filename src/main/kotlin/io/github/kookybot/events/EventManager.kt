@@ -19,10 +19,6 @@ package io.github.kookybot.events
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.mojang.brigadier.CommandDispatcher
-import com.mojang.brigadier.ParseResults
-import com.mojang.brigadier.arguments.StringArgumentType
-import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import io.github.kookybot.client.Client
 import io.github.kookybot.commands.*
@@ -39,11 +35,8 @@ import io.github.kookybot.events.self.SelfMessageEvent
 import io.github.kookybot.message.SelfMessage
 import io.github.kookybot.utils.Emoji
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.cancel
 import java.util.*
 import kotlin.reflect.KClass
-import kotlin.system.exitProcess
 import io.github.kookybot.events.Listener as Listener1
 
 
@@ -208,16 +201,20 @@ class EventManager(
             }
         }
         classListeners.forEach {
-            it.javaClass.methods.forEach { method ->
-                if (method.annotations.find { it.annotationClass == EventHandler::class } != null) {
-                    try {
-                        if (method.parameterTypes[0] == T::class.java) {
-                            method.invoke(it, event)
+            try {
+                it.javaClass.methods.forEach { method ->
+                    if (method.annotations.find { it.annotationClass == EventHandler::class } != null) {
+                        try {
+                            if (method.parameterTypes[0] == T::class.java) {
+                                method.invoke(it, event)
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
                     }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -432,137 +429,5 @@ class EventManager(
 
     fun addCommand(listener: (CommandDispatcher<CommandSource>) -> Unit) {
         listener(dispatcher)
-    }
-
-    init {
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("help")
-            .executes { context ->
-
-                context.source.sendMessage(
-                    dispatcher.getAllUsage(dispatcher.root, context.source, true).joinToString("") { "\n/${it}" }
-                )
-                0
-            }
-            .then(RequiredArgumentBuilder.argument<CommandSource?, String?>(
-                "command",
-                StringArgumentType.greedyString()
-            )
-                .executes { context ->
-                    val parseResults: ParseResults<CommandSource> =
-                        dispatcher.parse(StringArgumentType.getString(context, "command"), context.source);
-                    if (parseResults.getContext().getNodes().isEmpty()) {
-                        throw Exception("Command not found.")
-                    } else {
-                        context.source.sendMessage(buildString {
-                            dispatcher.getSmartUsage(parseResults.context.nodes.last().node, context.source)
-                                .forEach {
-                                    append("/" + parseResults.reader.string + it)
-                                    context.source
-                                }
-                        })
-
-                        0
-                    }
-                })
-        )
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("echo")
-            .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("text", StringArgumentType.greedyString())
-                .executes {
-                    it.source.sendMessage(StringArgumentType.getString(it, "text"))
-                    0
-                }
-            )
-        )
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("stop")
-            .requires { it.hasPermission("kooky.owner") }
-            .executes {
-                client.close()
-                GlobalScope.coroutineContext.cancel()
-                exitProcess(0)
-            }
-        )
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("setowner")
-            .requires { it.hasPermission("kooky.owner") }
-            .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("uid", UserArgumentType.id())
-                .executes {
-                    client.permissionManager.setPermission(
-                        perm = "kooky.owner",
-                        user = UserArgumentType.getId(it, "uid"),
-                        value = true
-                    )
-                    it.source.sendMessage("Set owner")
-                    0
-                }
-            )
-        )
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("op")
-            .requires { it.hasPermission("kooky.operator") }
-            .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("scope", StringArgumentType.word())
-                .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("name", UserArgumentType.id())
-                    .executes {
-                        val name = UserArgumentType.getId(it, "name")
-                        when (StringArgumentType.getString(it, "scope")) {
-                            "global" -> client.permissionManager.setPermission(
-                                perm = "kooky.operator",
-                                user = name,
-                                value = true
-                            )
-                            "channel" -> client.permissionManager.setPermission(
-                                perm = "kooky.operator",
-                                user = name,
-                                channelId = it.source.channel!!.id,
-                                value = true
-                            )
-                            "guild" -> client.permissionManager.setPermission(
-                                perm = "kooky.operator",
-                                user = name,
-                                guildId = it.source.channel!!.guild.id,
-                                value = true
-                            )
-                        }
-                        it.source.sendMessage("Oped")
-                        0
-                    }
-                )
-            )
-        )
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("permission")
-            .then(LiteralArgumentBuilder.literal<CommandSource?>("me")
-                .executes {
-                    if (it.source.type == CommandSource.Type.Console) {
-                        it.source.sendMessage("Console has all permissions.")
-                        return@executes 0
-                    }
-                    val pm = it.source.user!!.client.permissionManager
-                    it.source.sendMessage(
-                        buildString {
-                            append("global:\n")
-                            pm.global[it.source.user!!.id]?.forEach {
-                                append("  ${it.key} = ${it.value}\n")
-                            }
-                            if (it.source.channel != null) {
-                                append("this guild:\n")
-                                pm.guild[it.source.user!!.id]?.get(it.source.channel!!.guild.id)?.forEach {
-                                    append("  ${it.key} = ${it.value}\n")
-                                }
-                                append("this channel:\n")
-                                pm.channel[it.source.user!!.id]?.get(it.source.channel!!.id)?.forEach {
-                                    append("  ${it.key} = ${it.value}\n")
-                                }
-                            }
-                        }
-                    )
-                    0
-                }
-            )
-        )
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("ping")
-            .executes {
-                it.source.sendMessage(
-                    "pong, delay is ${Calendar.getInstance().timeInMillis - it.source.timestamp}ms"
-                )
-                0
-            }
-        )
     }
 }
