@@ -29,7 +29,7 @@ class GuildUser(
     val guild: Guild,
     online: Boolean = false,
     name: String = "",
-    val nickname: String = "",
+    var nickname: String = "",
     identifyNumber: String = "",
     status: UserState = UserState.NORMAL,
     bot: Boolean = false,
@@ -40,9 +40,9 @@ class GuildUser(
     @field:DontUpdate
     val roles: List<GuildRole> = listOf(),
     @field:SerializedName("joined_at")
-    val joinTime: Int = 0,
+    var joinTime: Int = 0,
     @field:SerializedName("active_time")
-    val activeTime: Int = 0,
+    var activeTime: Int = 0,
 ) : User(client,
     id,
     online,
@@ -55,12 +55,7 @@ class GuildUser(
     vipAvatarUrl,
     isVip), Updatable {
     override fun updateByJson(jsonElement: JsonElement) {
-        super.updateByJson(jsonElement)
-        status = when (jsonElement.asJsonObject.get("status").asInt) {
-            10 -> UserState.BANNED
-            else -> UserState.NORMAL
-        }
-
+        super<User>.updateByJson(jsonElement)
     }
     override fun update() {
         updateByJson(with(client) {

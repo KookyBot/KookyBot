@@ -130,9 +130,8 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                 eventManager.dispatcher.run {
                     register(LiteralArgumentBuilder.literal<CommandSource?>("help")
                         .executes { context ->
-
                             context.source.sendMessage(
-                                getAllUsage(root, context.source, true).joinToString("") { "\n/${it}" }
+                                getSmartUsage(root, context.source).toList().joinToString("") { "\n/${it.second}" }
                             )
                             0
                         }
@@ -662,12 +661,14 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         if (!jsonObject.has("vip_avatar")) {
             jsonObject.addProperty("vip_avatar", "")
         }
-        val user = Gson().fromJson(jsonObject, User::class.java)
-        user.status = when (jsonObject.get("status").asInt) {
+        val user = User(status = when (jsonObject.get("status").asInt) {
             10 -> UserState.BANNED
             else -> UserState.NORMAL
-        }
-        user.client = this
+        },
+            client = this,
+            id = jsonObject["id"].asString
+        )
+        user.updateByJson(jsonObject)
         return user
     }
 
@@ -815,6 +816,11 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                         }
 
                         override fun onClose(code: Int, reason: String, remote: Boolean) {
+                            if (code == 1002) {
+                                status = State.Disconnected
+                                resumeStatus = Reconnect
+                                return
+                            }
                             logger.info("websocket closed, code=$code, reason=$reason")
                             if (status == State.Closed) return
                             if (resumeStatus != None) return

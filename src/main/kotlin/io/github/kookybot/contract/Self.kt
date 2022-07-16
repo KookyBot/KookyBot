@@ -16,10 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.kookybot.contract
 
-import com.google.gson.JsonArray
 import io.github.kookybot.client.Client
-import io.github.kookybot.client.State
-import io.github.kookybot.exception.KookRemoteException
 import org.slf4j.LoggerFactory
 
 class Self(
@@ -27,31 +24,33 @@ class Self(
 ) {
     val logger = LoggerFactory.getLogger(this::class.java)
     val id: String
-    val guilds: List<Guild> = let {
-        val list: MutableList<Guild> = mutableListOf()
-        with (client) {
-            if (status != State.Connected) return@let list
-            val jsonObject = sendRequest(requestBuilder(Client.RequestType.GUILD_LIST))
-            jsonObject.asJsonObject.get("items").asJsonArray.forEach { item ->
-                val guild = Guild(client, item.asJsonObject.get("id").asString)
-                guild.update()
-                list.add(guild)
-            }
+    val guilds: List<Guild> =
+        with(client) {
+            sendRequest(requestBuilder(Client.RequestType.GUILD_LIST))
+                .asJsonObject.get("items").asJsonArray.map { item ->
+                    try {
+                        val guild = Guild(client, item.asJsonObject.get("id").asString)
+                        guild.update()
+                        guild
+                    } catch (e: Exception) {
+                        logger.error("初始化服务器缓存对象时发生异常，请检查错误或提交issue", e)
+                        null
+                    }
+                }.filterNotNull().toMutableList()
         }
-        return@let list
-    }
     val chattingUsers: List<PrivateChatUser> =
         with(client) {
-            val jsonObject = sendRequest(requestBuilder(Client.RequestType.USER_CHAT_LIST))
-            return@with try {
-                jsonObject.asJsonObject.get("items").asJsonArray
-            } catch (e: KookRemoteException) { // 没有用户给我报错
-                JsonArray()                    // 听我说谢谢你
-            }.map { item ->
-                val user = PrivateChatUser(code = item.asJsonObject.get("code").asString, client = client)
-                user.update()
-                return@map user
-            }.toMutableList()
+            sendRequest(requestBuilder(Client.RequestType.USER_CHAT_LIST))
+                .asJsonObject.get("items").asJsonArray.map { item ->
+                    try {
+                        val user = PrivateChatUser(code = item.asJsonObject.get("code").asString, client = client)
+                        user.update()
+                        return@map user
+                    } catch (e: Exception) {
+                        logger.error("初始化私聊会话缓存对象时发生异常，请检查错误或提交issue", e)
+                        return@map null
+                    }
+                }.filterNotNull().toMutableList()
         }
     fun getUser(userId: String): User {
         return client.getUser(userId)

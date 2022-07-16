@@ -7,6 +7,9 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import io.github.kookybot.client.Client
 import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.commands.StringListArgumentType
+import io.github.kookybot.events.EventHandler
+import io.github.kookybot.events.Listener
+import io.github.kookybot.events.channel.ChannelMessageEvent
 import io.github.kookybot.message.CardMessage
 import io.github.kookybot.message.ImageMessage
 import io.github.kookybot.message.SelfMessage
@@ -14,11 +17,20 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.*
 
+public class MyListener : Listener {
+    @EventHandler
+    fun channel(channelMessageEvent: ChannelMessageEvent) {
+        println("${channelMessageEvent.sender.nickname}&${channelMessageEvent.sender.fullName}")
+    }
+}
+
 suspend fun main() {
+
     val token = File("data/token.txt").readText()
     val client = Client(token) {
         withDefaultCommands()
     }
+    client.eventManager.addClassListener(MyListener())
     val self = client.start()
     val logger = LoggerFactory.getLogger("ApiTest")
     client.addCommand { dispatcher ->

@@ -58,9 +58,7 @@ class PrivateChatUser(
             sendRequest(requestBuilder(Client.RequestType.USER_CHAT_VIEW, "chat_code" to code))
         }
         updateByJson(json)
-        updateByJson(with(client) {
-            sendRequest(requestBuilder(Client.RequestType.USER_VIEW, "user_id" to json["target_info"].asJsonObject["id"].asString))
-        })
+        updateByJson(json["target_info"].asJsonObject)
     }
     fun sendMessage(message: String, quote: String? = null) {
         val msg = MarkdownMessage(client, message)

@@ -16,10 +16,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.kookybot.contract
 
+import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import io.github.kookybot.client.Client
 import io.github.kookybot.message.Message
 import io.github.kookybot.message.SelfMessage
+import io.github.kookybot.utils.DontUpdate
+import io.github.kookybot.utils.Updatable
 
 /**
  * 警告：
@@ -33,43 +36,59 @@ enum class UserState {
     BANNED,
 }
 
+/**
+ * 这个类无法自动更新，因为根据官方文档，我们无法保证他是最新的。
+ *
+ * 请使用：[PrivateChatUser]和[GuildUser]，他们可以保证最新
+ */
 open class User(
     @Transient
     override var client: Client,
     override val id: String,
-    val online: Boolean,
-    val name: String,
-    @field:SerializedName("identify_num")
-    val identifyNumber: String,
-    @field:Transient
-    var status: UserState,
-    val bot: Boolean,
-    @field:SerializedName("mobile_verified")
-    val mobilePhoneVerified: Boolean,
-    @field:SerializedName("avatar")
-    val avatarUrl: String,
-    @field:SerializedName("vip_avatar")
-    val vipAvatarUrl: String,
+    var online: Boolean = false,
+    @SerializedName("username")
+    var name: String = "",
+    @field:SerializedName("identify_num") var identifyNumber: String = "",
+    @field:Transient @DontUpdate var status: UserState = UserState.NORMAL,
+    var bot: Boolean = false,
+    @field:SerializedName("mobile_verified") var mobilePhoneVerified: Boolean = false,
+    @field:SerializedName("avatar") var avatarUrl: String = "",
+    @field:SerializedName("vip_avatar") var vipAvatarUrl: String = "",
     /**
      * 不要使用，正在试图修复兼容性问题
      */
-    @field:SerializedName("is_vip")
-    val isVip: Boolean,
-): MessageReceiver {
+    @field:SerializedName("is_vip") var isVip: Boolean = false,
+) : MessageReceiver, Updatable {
     override fun sendMessage(message: Message): SelfMessage {
         return client.sendUserMessage(
-            target = talkTo(),
+            target = this,
             content = message.content()
         )
     }
+
     fun talkTo(): PrivateChatUser {
         return (client.self!!.chattingUsers.find { it.id == id }) ?: let {
             client.sendRequest(client.requestBuilder(Client.RequestType.CREATE_CHAT, "target_id" to id))
             return client.self!!.updatePrivateChatUser(id)
         }
     }
+
     fun atGuild(guild: Guild): GuildUser? {
         return client.self!!.getGuildUser(id, guild.id)
     }
+
     val fullName get() = "$name#$identifyNumber"
+    override fun update() {
+        throw Exception("No impl.")
+    }
+
+    override fun updateByJson(jsonElement: JsonElement) {
+        super.updateByJson(jsonElement)
+        if (jsonElement.asJsonObject["status"] != null) {
+            status = when (jsonElement.asJsonObject["status"].asInt) {
+                10 -> UserState.BANNED
+                else -> UserState.NORMAL
+            }
+        }
+    }
 }

@@ -36,7 +36,6 @@ interface Updatable {
                 if (it.javaField?.annotations?.filter { it.annotationClass == DontUpdate::class }?.isNotEmpty() == true) {
                     return@forEach
                 }
-
                 when (it.returnType.javaType) {
                     Int::class.java -> it.setter.call(this, jsonElement.get(name).asInt)
                     String::class.java -> it.setter.call(this, jsonElement.get(name).asString)
