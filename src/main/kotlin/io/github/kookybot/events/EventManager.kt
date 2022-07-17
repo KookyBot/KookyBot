@@ -182,16 +182,27 @@ class EventManager(
         }
     }
 
-    inline fun <reified T : Event> callEvent(event: T) {
-        when (event) {
-            is CardButtonClickEvent -> {
-                clickEvents.forEach {
-                    if (it.first == event.value)
-                        it.second(event)
-                }
+    fun checkAndParseCommand(event: MessageEvent) {
+        if (with(client) {
+                (config.enableCommand)
+            }) {
+            when (event) {
+                is DirectMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event)
+                is ChannelMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event)
             }
-            is DirectMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event)
-            is ChannelMessageEvent -> if (event.eventType == MessageEvent.EventType.MARKDOWN) parseCommand(event)
+        }
+    }
+
+    inline fun <reified T : Event> callEvent(event: T) {
+
+        if (event is CardButtonClickEvent) {
+            clickEvents.forEach {
+                if (it.first == event.value)
+                    it.second(event)
+            }
+        }
+        if (event is MessageEvent) {
+            checkAndParseCommand(event)
         }
         listeners[T::class]?.forEach { it ->
             try {

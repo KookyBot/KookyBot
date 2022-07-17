@@ -65,7 +65,7 @@ class Self(
     }
 
     internal fun updatePrivateChatUser(userId: String): PrivateChatUser {
-        val jsonObject = with(client){sendRequest(requestBuilder(Client.RequestType.USER_CHAT_LIST))}
+        val jsonObject = with(client) { sendRequest(requestBuilder(Client.RequestType.USER_CHAT_LIST)) }
         val code = jsonObject.asJsonObject.get("items").asJsonArray.find {
             it.asJsonObject.get("target_info").asJsonObject.get("id").asString == userId
         }!!.asJsonObject.get("code").asString
@@ -73,6 +73,24 @@ class Self(
         user.update()
         (chattingUsers as MutableList).add(user)
         return user
+    }
+
+    enum class MusicProvider {
+        CloudMusic,
+        QqMusic,
+        Kugou
+    }
+
+    fun setListening(software: MusicProvider = MusicProvider.CloudMusic, singer: String, name: String) {
+        client.run {
+            sendRequest(requestBuilder(
+                Client.RequestType.ACTIVITY,
+                "data_type" to 2,
+                "software" to software.name.lowercase(),
+                "singer" to singer,
+                "music_name" to name,
+            ))
+        }
     }
 
     init {

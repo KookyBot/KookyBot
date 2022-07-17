@@ -42,7 +42,7 @@ class PermissionManager(
     private val root = PermissionTreeNode("root")
     private val nodes = mutableMapOf("root" to root)
     var configFile: File = File("data/perm.json")
-    var json: JsonObject
+    var json: JsonObject = JsonObject()
 
     fun printAll(node: PermissionTreeNode = root): String {
         return node.printChildren(0)
@@ -51,15 +51,15 @@ class PermissionManager(
     fun searchNode(perm: String): PermissionTreeNode? = nodes[perm]
 
     init {
-        if (configFile.isFile) {
-            json = Gson().fromJson(configFile.readText(), JsonObject::class.java)
-        } else {
-            json = JsonObject()
+        if (client.config.enablePermission) {
+            if (configFile.isFile) {
+                json = Gson().fromJson(configFile.readText(), JsonObject::class.java)
+            }
+            configFile.writeText(json.toString())
         }
         if (!json.has("global")) json.add("global", JsonObject())
         if (!json.has("guild")) json.add("guild", JsonObject())
         if (!json.has("channel")) json.add("channel", JsonObject())
-        configFile.writeText(json.toString())
     }
 
     /**
@@ -100,6 +100,7 @@ class PermissionManager(
     }
 
     fun hasPermission(perm: String, user: String, guildId: String? = null, channelId: String? = null): Boolean {
+        if (!client.config.enablePermission) return false
         fun check(perm: String): Boolean? {
             with(channel[user]?.get(channelId)?.get(perm)) {
                 if (this != null) return this
@@ -124,6 +125,7 @@ class PermissionManager(
     }
 
     fun setPermission(perm: String, user: String, guildId: String? = null, channelId: String? = null, value: Boolean?) {
+        if (!client.config.enablePermission) throw Exception("Permission disabled.")
         if (searchNode(perm) == null) throw Exception("Permission not found.")
         if (guildId != null) {
             if (!guild.containsKey(user)) {
@@ -157,6 +159,7 @@ class PermissionManager(
     }
 
     fun save() {
+        if (!client.config.enablePermission) throw Exception("Permission disabled.")
         json = Gson().toJsonTree(mapOf(
             "global" to global,
             "channel" to channel,
@@ -165,10 +168,15 @@ class PermissionManager(
         configFile.writeText(json.toString())
     }
 
+    fun register(father: PermissionTreeNode?, name: String): PermissionTreeNode {
+        if (searchNode(name) != null) throw Exception("permission already exists.")
+        val node = father?.addChild(name) ?: root.addChild(name)
+        nodes[name] = node
+        return node
+    }
+
     init {
-        val owner = root.addChild("kooky.owner")
-        val operator = owner.addChild("kooky.operator")
-        nodes["kooky.owner"] = owner
-        nodes["kooky.operator"] = operator
+        val owner = register(null, "kooky.owner")
+        val operator = register(owner, "kooky.operator")
     }
 }

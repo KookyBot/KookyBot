@@ -98,19 +98,34 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
     var pingStatus = PingState.Success
     var self: Self? = null
     private var webSocketClient: WebSocketClient? = null
-    private val httpClient = HttpClient.newHttpClient()
-    val eventManager = EventManager(this)
-    val permissionManager = PermissionManager(this)
     val config = ConfigureScope(this)
+    val eventManager = EventManager(this)
+
+    // configure client
+    init {
+        configure?.let {
+            config.it()
+        }
+        if (!config.dataFolder.isDirectory)
+            config.dataFolder.mkdir()
+    }
+
+    private val httpClient = HttpClient.newHttpClient()
+    val permissionManager = PermissionManager(this)
     private val updatableList: MutableList<Updatable> = mutableListOf()
     private var updateJob: Job? = null
 
     class ConfigureScope(internal val client: Client) {
         internal var enableCommand = true
         internal var enablePermission = true
-        internal var commandPerfix = listOf("/")
+        internal var commandPrefix = listOf("/")
+        internal var dataFolder = File("data/")
         fun withCommands() {
             enableCommand = true
+        }
+
+        fun withDataFolder(file: File) {
+            dataFolder = file
         }
 
         fun withoutCommands() {
@@ -126,6 +141,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         }
 
         fun withDefaultCommands() {
+            withCommands()
             client.run {
                 eventManager.dispatcher.run {
                     register(LiteralArgumentBuilder.literal<CommandSource?>("help")
@@ -356,6 +372,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         CREATE_CHANNEL,
         ADD_REACTION,
         CANCEL_REACTION,
+        ACTIVITY,
     }
 
     private fun apiOf(path: String): URI {
@@ -405,7 +422,8 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
             GATEWAY_RESUME -> builder.uri(apiOf("/gateway/index?sn=$lastSn&resume=1&session_id=$sessionId")).GET()
             GUILD_LIST -> builder.uri(apiOf("/guild/list")).GET()
             GUILD_VIEW -> builder.uri(apiOf("/guild/view?guild_id=${values!!["guild_id"]}")).GET()
-            USER_VIEW -> builder.uri(apiOf("/user/view?user_id=${values!!["user_id"]}")).GET()
+            USER_VIEW -> builder.uri(apiOf("/user/view?user_id=${values!!["user_id"]}&guild_id=${values!!["guild_id"] ?: ""}"))
+                .GET()
             SEND_PRIVATE_MESSAGE -> builder.uri(apiOf("/direct-message/create"))
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
@@ -460,6 +478,9 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
             CANCEL_REACTION -> builder.uri(apiOf("/message/delete-reaction"))
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
+            ACTIVITY -> builder.uri(apiOf("/game/activity"))
+                .header("content-type", "application/json")
+                .POST(postAll(values!!))
         }
         return builder.build()
     }
@@ -478,8 +499,9 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                         if (total != 1) {
                             for (i in (1 until total)) {
                                 var url = request.uri().toString()
-                                url += if (url.contains('?')) "&page=$i"
-                                else "?page=$i"
+                                url +=
+                                    if (url.contains('?')) "&page=$i"
+                                    else "?page=$i"
                                 val req = HttpRequest.newBuilder(URI(url))
                                     .method(request.method(), request.bodyPublisher().getOrNull())
                                 for (header in request.headers().map()) {
@@ -884,8 +906,5 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
     init {
         pingThread.start()
         reconnectThread.start()
-        configure?.let {
-            config.it()
-        }
     }
 }
