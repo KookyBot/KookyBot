@@ -10,6 +10,7 @@ import io.github.kookybot.commands.StringListArgumentType
 import io.github.kookybot.events.EventHandler
 import io.github.kookybot.events.Listener
 import io.github.kookybot.events.channel.ChannelMessageEvent
+import io.github.kookybot.events.direct.DirectMessageEvent
 import io.github.kookybot.message.CardMessage
 import io.github.kookybot.message.ImageMessage
 import io.github.kookybot.message.SelfMessage
@@ -20,7 +21,12 @@ import java.util.*
 public class MyListener : Listener {
     @EventHandler
     fun channel(channelMessageEvent: ChannelMessageEvent) {
-        println("${channelMessageEvent.sender.nickname}&${channelMessageEvent.sender.fullName}")
+        println("channel-sender = ${channelMessageEvent.sender.nickname}&${channelMessageEvent.sender.fullName}")
+    }
+
+    @EventHandler
+    fun direct(directMessageEvent: DirectMessageEvent) {
+        println("direct-sender = ${directMessageEvent.sender.name}(${directMessageEvent.sender.id}) ${directMessageEvent.sender.code}")
     }
 }
 
@@ -33,6 +39,7 @@ suspend fun main() {
     client.eventManager.addClassListener(MyListener())
     val self = client.start()
     val logger = LoggerFactory.getLogger("ApiTest")
+    self.setListening(singer = "洛天依", name = "十周年快乐！")
     client.addCommand { dispatcher ->
         dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("lottery")
             .then(argument<CommandSource?, String?>("name", StringArgumentType.word())

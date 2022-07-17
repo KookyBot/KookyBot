@@ -99,7 +99,6 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
     var self: Self? = null
     private var webSocketClient: WebSocketClient? = null
     val config = ConfigureScope(this)
-    val eventManager = EventManager(this)
 
     // configure client
     init {
@@ -112,178 +111,171 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
 
     private val httpClient = HttpClient.newHttpClient()
     val permissionManager = PermissionManager(this)
+    val eventManager = EventManager(this)
+
+    init {
+        if (config.defaultCommand) {
+            eventManager.dispatcher.run {
+                register(LiteralArgumentBuilder.literal<CommandSource?>("help")
+                    .executes { context ->
+                        context.source.sendMessage(
+                            getSmartUsage(root, context.source).toList().joinToString("") { "\n/${it.second}" }
+                        )
+                        0
+                    }
+                    .then(RequiredArgumentBuilder.argument<CommandSource?, String?>(
+                        "command",
+                        StringArgumentType.greedyString()
+                    )
+                        .executes { context ->
+                            val parseResults: ParseResults<CommandSource> =
+                                parse(StringArgumentType.getString(context, "command"), context.source);
+                            if (parseResults.getContext().getNodes().isEmpty()) {
+                                throw Exception("Command not found.")
+                            } else {
+                                context.source.sendMessage(buildString {
+                                    getSmartUsage(parseResults.context.nodes.last().node, context.source)
+                                        .forEach {
+                                            append("/" + parseResults.reader.string + it)
+                                            context.source
+                                        }
+                                })
+
+                                0
+                            }
+                        })
+                )
+                register(LiteralArgumentBuilder.literal<CommandSource?>("echo")
+                    .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("text",
+                        StringArgumentType.greedyString())
+                        .executes {
+                            it.source.sendMessage(StringArgumentType.getString(it, "text"))
+                            0
+                        }
+                    )
+                )
+                register(LiteralArgumentBuilder.literal<CommandSource?>("stop")
+                    .requires { it.hasPermission("kooky.owner") }
+                    .executes {
+                        this@Client.close()
+                        GlobalScope.coroutineContext.cancel()
+                        exitProcess(0)
+                    }
+                )
+                register(LiteralArgumentBuilder.literal<CommandSource?>("setowner")
+                    .requires { it.hasPermission("kooky.owner") }
+                    .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("uid", UserArgumentType.id())
+                        .executes {
+                            permissionManager.setPermission(
+                                perm = "kooky.owner",
+                                user = UserArgumentType.getId(it, "uid"),
+                                value = true
+                            )
+                            it.source.sendMessage("Set owner")
+                            0
+                        }
+                    )
+                )
+                register(LiteralArgumentBuilder.literal<CommandSource?>("op")
+                    .requires { it.hasPermission("kooky.operator") }
+                    .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("scope",
+                        StringArgumentType.word())
+                        .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("name",
+                            UserArgumentType.id())
+                            .executes {
+                                val name = UserArgumentType.getId(it, "name")
+                                when (StringArgumentType.getString(it, "scope")) {
+                                    "global" -> permissionManager.setPermission(
+                                        perm = "kooky.operator",
+                                        user = name,
+                                        value = true
+                                    )
+                                    "channel" -> permissionManager.setPermission(
+                                        perm = "kooky.operator",
+                                        user = name,
+                                        channelId = it.source.channel!!.id,
+                                        value = true
+                                    )
+                                    "guild" -> permissionManager.setPermission(
+                                        perm = "kooky.operator",
+                                        user = name,
+                                        guildId = it.source.channel!!.guild.id,
+                                        value = true
+                                    )
+                                }
+                                it.source.sendMessage("Oped")
+                                0
+                            }
+                        )
+                    )
+                )
+                register(LiteralArgumentBuilder.literal<CommandSource?>("permission")
+                    .then(LiteralArgumentBuilder.literal<CommandSource?>("me")
+                        .executes {
+                            if (it.source.type == CommandSource.Type.Console) {
+                                it.source.sendMessage("Console has all permissions.")
+                                return@executes 0
+                            }
+                            val pm = it.source.user!!.client.permissionManager
+                            it.source.sendMessage(
+                                buildString {
+                                    append("global:\n")
+                                    pm.global[it.source.user!!.id]?.forEach {
+                                        append("  ${it.key} = ${it.value}\n")
+                                    }
+                                    if (it.source.channel != null) {
+                                        append("this guild:\n")
+                                        pm.guild[it.source.user!!.id]?.get(it.source.channel!!.guild.id)?.forEach {
+                                            append("  ${it.key} = ${it.value}\n")
+                                        }
+                                        append("this channel:\n")
+                                        pm.channel[it.source.user!!.id]?.get(it.source.channel!!.id)?.forEach {
+                                            append("  ${it.key} = ${it.value}\n")
+                                        }
+                                    }
+                                }
+                            )
+                            0
+                        }
+                    )
+                    .then(LiteralArgumentBuilder.literal<CommandSource?>("list")
+                        .requires { it.hasPermission("kooky.operator") }
+                        .executes {
+                            it.source.sendMessage(permissionManager.printAll())
+                            0
+                        }
+                    )
+                )
+                register(LiteralArgumentBuilder.literal<CommandSource?>("ping")
+                    .executes {
+                        it.source.sendMessage(
+                            "pong, delay is ${Calendar.getInstance().timeInMillis - it.source.timestamp}ms"
+                        )
+                        0
+                    }
+                )
+            }
+        }
+    }
+
+    /**
+     * Note: this field is for interval updating.
+     */
     private val updatableList: MutableList<Updatable> = mutableListOf()
     private var updateJob: Job? = null
 
     class ConfigureScope(internal val client: Client) {
-        internal var enableCommand = true
-        internal var enablePermission = true
+        var enableCommand = true
+        var enablePermission = true
         internal var commandPrefix = listOf("/")
         internal var dataFolder = File("data/")
-        fun withCommands() {
-            enableCommand = true
-        }
-
+        internal var defaultCommand = false
         fun withDataFolder(file: File) {
             dataFolder = file
         }
 
-        fun withoutCommands() {
-            enableCommand = false
-        }
-
-        fun withPermissionManager() {
-            enablePermission = true
-        }
-
-        fun withoutPermissionManager() {
-            enablePermission = false
-        }
-
         fun withDefaultCommands() {
-            withCommands()
-            client.run {
-                eventManager.dispatcher.run {
-                    register(LiteralArgumentBuilder.literal<CommandSource?>("help")
-                        .executes { context ->
-                            context.source.sendMessage(
-                                getSmartUsage(root, context.source).toList().joinToString("") { "\n/${it.second}" }
-                            )
-                            0
-                        }
-                        .then(RequiredArgumentBuilder.argument<CommandSource?, String?>(
-                            "command",
-                            StringArgumentType.greedyString()
-                        )
-                            .executes { context ->
-                                val parseResults: ParseResults<CommandSource> =
-                                    parse(StringArgumentType.getString(context, "command"), context.source);
-                                if (parseResults.getContext().getNodes().isEmpty()) {
-                                    throw Exception("Command not found.")
-                                } else {
-                                    context.source.sendMessage(buildString {
-                                        getSmartUsage(parseResults.context.nodes.last().node, context.source)
-                                            .forEach {
-                                                append("/" + parseResults.reader.string + it)
-                                                context.source
-                                            }
-                                    })
-
-                                    0
-                                }
-                            })
-                    )
-                    register(LiteralArgumentBuilder.literal<CommandSource?>("echo")
-                        .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("text",
-                            StringArgumentType.greedyString())
-                            .executes {
-                                it.source.sendMessage(StringArgumentType.getString(it, "text"))
-                                0
-                            }
-                        )
-                    )
-                    register(LiteralArgumentBuilder.literal<CommandSource?>("stop")
-                        .requires { it.hasPermission("kooky.owner") }
-                        .executes {
-                            client.close()
-                            GlobalScope.coroutineContext.cancel()
-                            exitProcess(0)
-                        }
-                    )
-                    register(LiteralArgumentBuilder.literal<CommandSource?>("setowner")
-                        .requires { it.hasPermission("kooky.owner") }
-                        .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("uid", UserArgumentType.id())
-                            .executes {
-                                permissionManager.setPermission(
-                                    perm = "kooky.owner",
-                                    user = UserArgumentType.getId(it, "uid"),
-                                    value = true
-                                )
-                                it.source.sendMessage("Set owner")
-                                0
-                            }
-                        )
-                    )
-                    register(LiteralArgumentBuilder.literal<CommandSource?>("op")
-                        .requires { it.hasPermission("kooky.operator") }
-                        .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("scope",
-                            StringArgumentType.word())
-                            .then(RequiredArgumentBuilder.argument<CommandSource?, String?>("name",
-                                UserArgumentType.id())
-                                .executes {
-                                    val name = UserArgumentType.getId(it, "name")
-                                    when (StringArgumentType.getString(it, "scope")) {
-                                        "global" -> permissionManager.setPermission(
-                                            perm = "kooky.operator",
-                                            user = name,
-                                            value = true
-                                        )
-                                        "channel" -> permissionManager.setPermission(
-                                            perm = "kooky.operator",
-                                            user = name,
-                                            channelId = it.source.channel!!.id,
-                                            value = true
-                                        )
-                                        "guild" -> permissionManager.setPermission(
-                                            perm = "kooky.operator",
-                                            user = name,
-                                            guildId = it.source.channel!!.guild.id,
-                                            value = true
-                                        )
-                                    }
-                                    it.source.sendMessage("Oped")
-                                    0
-                                }
-                            )
-                        )
-                    )
-                    register(LiteralArgumentBuilder.literal<CommandSource?>("permission")
-                        .then(LiteralArgumentBuilder.literal<CommandSource?>("me")
-                            .executes {
-                                if (it.source.type == CommandSource.Type.Console) {
-                                    it.source.sendMessage("Console has all permissions.")
-                                    return@executes 0
-                                }
-                                val pm = it.source.user!!.client.permissionManager
-                                it.source.sendMessage(
-                                    buildString {
-                                        append("global:\n")
-                                        pm.global[it.source.user!!.id]?.forEach {
-                                            append("  ${it.key} = ${it.value}\n")
-                                        }
-                                        if (it.source.channel != null) {
-                                            append("this guild:\n")
-                                            pm.guild[it.source.user!!.id]?.get(it.source.channel!!.guild.id)?.forEach {
-                                                append("  ${it.key} = ${it.value}\n")
-                                            }
-                                            append("this channel:\n")
-                                            pm.channel[it.source.user!!.id]?.get(it.source.channel!!.id)?.forEach {
-                                                append("  ${it.key} = ${it.value}\n")
-                                            }
-                                        }
-                                    }
-                                )
-                                0
-                            }
-                        )
-                        .then(LiteralArgumentBuilder.literal<CommandSource?>("list")
-                            .requires { it.hasPermission("kooky.operator") }
-                            .executes {
-                                it.source.sendMessage(permissionManager.printAll())
-                                0
-                            }
-                        )
-                    )
-                    register(LiteralArgumentBuilder.literal<CommandSource?>("ping")
-                        .executes {
-                            it.source.sendMessage(
-                                "pong, delay is ${Calendar.getInstance().timeInMillis - it.source.timestamp}ms"
-                            )
-                            0
-                        }
-                    )
-                }
-            }
+            defaultCommand = true
         }
 
         fun withOwner(id: String) {
@@ -422,7 +414,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
             GATEWAY_RESUME -> builder.uri(apiOf("/gateway/index?sn=$lastSn&resume=1&session_id=$sessionId")).GET()
             GUILD_LIST -> builder.uri(apiOf("/guild/list")).GET()
             GUILD_VIEW -> builder.uri(apiOf("/guild/view?guild_id=${values!!["guild_id"]}")).GET()
-            USER_VIEW -> builder.uri(apiOf("/user/view?user_id=${values!!["user_id"]}&guild_id=${values!!["guild_id"] ?: ""}"))
+            USER_VIEW -> builder.uri(apiOf("/user/view?user_id=${values!!["user_id"]}&guild_id=${values["guild_id"] ?: ""}"))
                 .GET()
             SEND_PRIVATE_MESSAGE -> builder.uri(apiOf("/direct-message/create"))
                 .header("content-type", "application/json")

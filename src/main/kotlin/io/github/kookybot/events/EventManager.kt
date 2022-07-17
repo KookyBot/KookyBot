@@ -21,7 +21,7 @@ import com.google.gson.JsonObject
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import io.github.kookybot.client.Client
-import io.github.kookybot.commands.*
+import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.contract.Guild
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.events.channel.*
@@ -64,9 +64,6 @@ class EventManager(
     val listeners: MutableMap<KClass<out Event>, MutableList<SingleEventHandler<*>>> = mutableMapOf()
     val classListeners: MutableList<Listener1> = mutableListOf()
 
-    @Deprecated("use brigadier")
-    val commands: MutableList<Command> = mutableListOf()
-
     // 用于click处理
     val clickEvents: MutableList<Pair<String, (CardButtonClickEvent) -> Unit>> = mutableListOf()
 
@@ -80,76 +77,7 @@ class EventManager(
     }
 
     fun parseCommand(event: MessageEvent) {
-        if (!event.content.startsWith('/')) return
-        @Deprecated("")
-        if (commands.find { event.content.startsWith("/${it.name} ") } != null) {
-            val args = mutableListOf<String>()
-            event.content.substring(1 until event.content.length).split(' ').map {
-                if (it == "") listOf()
-                else if (it.contains("(met")) {
-                    listOf(it)
-                } else
-                    listOf(it)
-            }.forEach { args.addAll(it) }
-            if (args.size == 0) {
-                when (event) {
-                    is DirectMessageEvent -> event.sender.sendMessage("找不到命令")
-                    is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)找不到命令")
-                }
-                return
-            }
-            val command = commands.find { it.name == args[0] }!!
-            val source = when (event) {
-                is DirectMessageEvent -> CommandContext(
-                    user = event.sender,
-                    label = args[0],
-                    args = if (args.size == 1) arrayOf() else args.subList(1, args.size).toTypedArray(),
-                    command = command,
-                    channel = null
-                )
-                is ChannelMessageEvent -> CommandContext(
-                    user = event.sender,
-                    label = args[0],
-                    args = if (args.size == 1) arrayOf() else args.subList(1, args.size).toTypedArray(),
-                    command = command,
-                    channel = event.channel
-                )
-                else -> throw Exception()
-            }
-            try {
-                var invoke = true
-                for (annotation in command.javaClass.getMethod("onExecute", CommandContext::class.java).annotations) {
-                    if (annotation is RequireGuild) {
-                        invoke = false
-                        if (event is ChannelMessageEvent) {
-                            if (event.guild.id == annotation.id) {
-                                invoke = true
-                                break
-                            }
-                        }
-                    }
-                    if (annotation is RequireChannel) {
-                        invoke = false
-                        if (event is ChannelMessageEvent) {
-                            if (event.channel.id != annotation.id) {
-                                invoke = true
-                                break
-                            }
-                        }
-                    }
-                }
-                if (invoke) {
-                    command.onExecute(source)
-                }
-            } catch (e: Exception) {
-                when (event) {
-                    is DirectMessageEvent -> event.sender.sendMessage("执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
-                    is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
-                }
-                e.printStackTrace()
-            }
-            return
-        }
+        if (client.config.commandPrefix.map { event.content.startsWith(it) }.find { it } == null) return
         val source = when (event) {
             is ChannelMessageEvent -> CommandSource(
                 type = CommandSource.Type.Channel,
@@ -432,10 +360,6 @@ class EventManager(
 
     fun addClassListener(listener: Listener1) {
         classListeners.add(listener)
-    }
-
-    fun addCommand(command: Command) {
-        commands.add(command)
     }
 
     fun addCommand(listener: (CommandDispatcher<CommandSource>) -> Unit) {

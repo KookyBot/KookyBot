@@ -43,7 +43,9 @@ class Self(
             sendRequest(requestBuilder(Client.RequestType.USER_CHAT_LIST))
                 .asJsonObject.get("items").asJsonArray.map { item ->
                     try {
-                        val user = PrivateChatUser(code = item.asJsonObject.get("code").asString, client = client)
+                        val user = PrivateChatUser(code = item.asJsonObject.get("code").asString,
+                            client = client,
+                            id = item.asJsonObject["target_info"].asJsonObject["id"].asString)
                         user.update()
                         return@map user
                     } catch (e: Exception) {

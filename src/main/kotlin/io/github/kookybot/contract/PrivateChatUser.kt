@@ -25,6 +25,7 @@ import io.github.kookybot.utils.Updatable
 class PrivateChatUser(
     @field:DontUpdate
     val code: String,
+    id: String,
     @field:SerializedName("last_read_time")
     var lastReadTime: Int = 0,
     @field:SerializedName("latest_msg_time")
@@ -40,7 +41,6 @@ class PrivateChatUser(
     avatarUrl: String = "",
     vipAvatarUrl: String = "",
     isVip: Boolean = false,
-    id: String = "",
     online: Boolean = false,
 ): User(client,
     id,
