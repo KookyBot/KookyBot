@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
+import io.github.kookybot.annotation.Filter
 import io.github.kookybot.client.Client
 import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.commands.StringListArgumentType
@@ -27,6 +28,12 @@ public class MyListener : Listener {
     @EventHandler
     fun direct(directMessageEvent: DirectMessageEvent) {
         println("direct-sender = ${directMessageEvent.sender.name}(${directMessageEvent.sender.id}) ${directMessageEvent.sender.code}")
+    }
+
+    @EventHandler
+    @Filter(".echo {content}")
+    fun test(content: String, source: CommandSource, message: String) {
+        source.sendMessage(content)
     }
 }
 

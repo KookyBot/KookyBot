@@ -33,9 +33,20 @@ class Category (
     val children: MutableList<Channel> = mutableListOf()
     override fun update() {
         with(client) {
-            val channel = Gson().fromJson(sendRequest(requestBuilder(Client.RequestType.VIEW_CHANNEL,
-                mapOf("channel_id" to id))), JsonObject::class.java)
+            val channel = Gson().fromJson(
+                sendRequest(
+                    requestBuilder(
+                        Client.RequestType.VIEW_CHANNEL,
+                        mapOf("channel_id" to id)
+                    )
+                ), JsonObject::class.java
+            )
             updateByJson(channel)
         }
+    }
+
+    fun updateAndGet(): Category {
+        update()
+        return this
     }
 }

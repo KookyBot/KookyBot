@@ -67,10 +67,10 @@ open class User(
     }
 
     fun talkTo(): PrivateChatUser {
-        return (client.self!!.chattingUsers.find { it.id == id }) ?: let {
+        return ((client.self!!.chattingUsers[id]) ?: let {
             client.sendRequest(client.requestBuilder(Client.RequestType.CREATE_CHAT, "target_id" to id))
             return client.self!!.updatePrivateChatUser(id)
-        }
+        }).value
     }
 
     fun atGuild(guild: Guild): GuildUser? {

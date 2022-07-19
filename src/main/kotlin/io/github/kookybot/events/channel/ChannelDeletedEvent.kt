@@ -21,5 +21,14 @@ import io.github.kookybot.contract.Self
 import io.github.kookybot.events.Event
 
 class ChannelDeletedEvent(
-    val channel: Channel, override val self: Self
+    val id: String,
+    /**
+     * 这表示已经缓存的数据
+     *
+     * 如果没有被缓存过，这将会是null
+     *
+     * 对于任何频道，您都可以使用[Channel]缓存之
+     */
+    val channel: Channel?,
+    override val self: Self,
 ) : Event

@@ -20,7 +20,6 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import io.github.kookybot.client.Client
-import io.github.kookybot.client.State
 import io.github.kookybot.utils.DontUpdate
 import io.github.kookybot.utils.Permission
 import io.github.kookybot.utils.PermissionImpl
@@ -70,10 +69,7 @@ class Guild(
     var boostCount: Int = 0
 
     @field:Transient
-    var channels: List<Channel> = listOf()
-
-    @field:Transient
-    var categories: List<Category> = listOf()
+    var categories: Map<String, Category> = mutableMapOf()
     var lazyUsers: MutableMap<String, Lazy<GuildUser>> =
         client.sendRequest(client.requestBuilder(Client.RequestType.GUILD_USER_LIST, "guild_id" to id))
             .get("items").asJsonArray.map { it.asJsonObject.get("id").asString }.map {
@@ -83,6 +79,8 @@ class Guild(
                     return@lazy user
                 }
             }.toMap().toMutableMap()
+
+    var lazyChannels: Map<String, Lazy<Channel>> = mutableMapOf()
 
     @field:DontUpdate
     var roleMap: Map<Int, GuildRole> = mapOf()
@@ -94,39 +92,42 @@ class Guild(
         super.updateByJson(jsonElement)
         if (!jsonElement.asJsonObject.get("enable_open").asBoolean)
             openId = null
-        channels = channels + jsonElement.asJsonObject.get("channels")
-            .asJsonArray
-            .map { it.asJsonObject }
-            .filter { !it.get("is_category").asBoolean }
-            .filter { !channels.map { it.id }.contains(it.get("id").asString) }
-            .map {
+
+        jsonElement.asJsonObject.get("channels").asJsonArray.map { it.asJsonObject }
+            .forEach {
                 val id = it.get("id").asString
-                val channel = when (it.get("type").asInt) {
-                    1 -> TextChannel(client, id, this@Guild)
-                    2 -> VoiceChannel(client, id, this@Guild)
-                    else -> throw Exception("Invalid channel type.")
+                if (it["is_category"].asBoolean) {
+                    if (categories.containsKey(id)) {
+                        (categories as MutableMap)[id] = Category(client, id, this@Guild).updateAndGet()
+                    }
+                } else {
+                    if (lazyChannels.containsKey(id)) return
+                    try {
+                        (lazyChannels as MutableMap)[id] = lazy {
+                            when (it.get("type").asInt) {
+                                1 -> TextChannel(client, id, this@Guild)
+                                2 -> VoiceChannel(client, id, this@Guild)
+                                else -> throw Exception("Invalid channel type.")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
-                try {
-                    channel.update()
-                    return@map channel
-                } catch (e: Exception) {
-                    return@map null
-                }
-            }.filterNotNull()
-        defaultChannel = channels.firstOrNull { it.id == jsonElement.asJsonObject.get("default_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
-        welcomeChannel = channels.firstOrNull { it.id == jsonElement.asJsonObject.get("welcome_channel_id").asString && it.type == ChannelType.TEXT } as TextChannel?
+            }
+
+        defaultChannel =
+            lazyChannels[jsonElement.asJsonObject.get("default_channel_id").asString]?.value as TextChannel?
+        welcomeChannel =
+            lazyChannels[jsonElement.asJsonObject.get("welcome_channel_id").asString]?.value as TextChannel?
     }
 
     override fun update() {
         with(client) {
-            if (status != State.Connected) return
             val g = client.sendRequest(requestBuilder(Client.RequestType.GUILD_VIEW,
                 mapOf("guild_id" to id)))
 
             updateByJson(g)
-
-            // bot permission
-
 
             if (true) {
                 roleMap = mutableMapOf()
@@ -160,13 +161,14 @@ class Guild(
                 "parent_id" to category?.id,
             ))
         }
+
         val channel = TextChannel(
             client = client,
             id = json.get("id").asString,
             guild = this
         )
         channel.update()
-        (channels as MutableList).add(channel)
+        (lazyChannels as MutableMap) += (json.get("id").asString to lazyOf(channel))
         category?.children?.add(channel)
         return channel
     }
@@ -185,7 +187,7 @@ class Guild(
             guild = this
         )
         channel.update()
-        (channels as MutableList).add(channel)
+        (lazyChannels as MutableMap) += (json.get("id").asString to lazyOf(channel))
         category?.children?.add(channel)
         return channel
     }
@@ -204,9 +206,16 @@ class Guild(
             name = name
         )
         category.update()
-        (categories as MutableList).add(category)
+        (categories as MutableMap) += (json.get("id").asString to category)
         return category
     }
 
+    fun updateUser(userId: String) {
+        client.run {
+            sendRequest(requestBuilder(Client.RequestType.USER_VIEW, "guild_id" to id, "user_id" to userId))
+        }
+    }
+
     fun getGuildUser(userId: String) = lazyUsers[userId]?.value
+    fun getChannel(channelId: String) = lazyChannels[channelId]?.value
 }

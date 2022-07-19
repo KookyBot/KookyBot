@@ -256,6 +256,19 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                 )
             }
         }
+        if (config.botMarketUUID != "") {
+            GlobalScope.launch {
+                while (true) {
+                    httpClient.send(
+                        HttpRequest.newBuilder()
+                            .uri(URI("http://bot.gekj.net/api/v1/online.bot"))
+                            .header("uuid", config.botMarketUUID)
+                            .build(), BodyHandlers.ofString()
+                    ).body()
+                    delay(30 * 60)
+                }
+            }
+        }
     }
 
     /**
@@ -267,9 +280,11 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
     class ConfigureScope(internal val client: Client) {
         var enableCommand = true
         var enablePermission = true
+        var botMarketUUID = ""
         internal var commandPrefix = listOf("/")
         internal var dataFolder = File("data/")
         internal var defaultCommand = false
+
         fun withDataFolder(file: File) {
             dataFolder = file
         }
@@ -519,13 +534,11 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         }
     }
 
-    private suspend fun resume() {
-    }
-
     private fun initWebsocket(url: String): WebSocketClient {
         return object : WebSocketClient(URI(url), mapOf("Authorization" to "Bot $token")) {
+            val id = UUID.randomUUID().toString()
             override fun onOpen(handshakedata: ServerHandshake) {
-                logger.debug("websocket opened: http status=${handshakedata.httpStatus}")
+                logger.debug("websocket opened: http status=${handshakedata.httpStatus}, id=$id")
             }
 
             override fun onMessage(bytes: ByteBuffer?) {
@@ -588,7 +601,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                     resumeStatus = Reconnect
                     return
                 }
-                logger.info("websocket closed, code=$code, reason=$reason")
+                logger.info("websocket $id closed, code=$code, reason=$reason")
                 if (status == State.Closed) return
                 if (resumeStatus != None) return
                 status = State.Disconnected
@@ -719,7 +732,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         content: String,
         quote: String? = null
     ): SelfMessage {
-        if (self!!.chattingUsers.find { it.id == target.id } == null) {
+        if (self!!.chattingUsers[target.id] == null) {
             sendRequest(requestBuilder(CREATE_CHAT, "target_id" to target.id))
             self!!.updatePrivateChatUser(target.id)
         }
@@ -768,85 +781,8 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
             if (resumeStatus == None) continue
             fun resume(): Boolean {
                 try {
-                    webSocketClient = object :
-                        WebSocketClient(URI((sendRequest(requestBuilder(GATEWAY_RESUME)).get("url").asString)),
-                            mapOf("Authorization" to "Bot $token")) {
-                        override fun onOpen(handshakedata: ServerHandshake) {
-                            logger.debug("websocket opened: http status=${handshakedata.httpStatus}")
-                            send("{\"s\":4,\"sn\":$lastSn}")
-                        }
-
-                        override fun onMessage(bytes: ByteBuffer?) {
-                            if (bytes == null) return
-                            onMessage(
-                                InflaterInputStream(bytes.array().inputStream()).bufferedReader().readText()
-                            )
-                        }
-
-                        override fun onMessage(message: String) {
-                            logger.debug("[Event received] $message")
-                            var json = Gson().fromJson(message, JsonObject::class.java)
-                            resumeStatus = None
-                            when (json.get("s").asInt) {
-                                0 -> {
-                                    lastSn = json.get("sn").asInt
-                                    json = json["d"].asJsonObject
-                                    eventManager.callEventRaw(json)
-                                }
-                                1 -> {
-                                    when (val code = json["d"].asJsonObject["code"].asInt) {
-                                        0 -> {
-                                            logger.info("hello received: ok")
-                                            status = State.Connected
-                                            sessionId = json.get("d").asJsonObject.get("session_id").asString
-                                            self = Self(this@Client)
-                                        }
-                                        40101 -> throw Error("token无效，请使用正确的token")
-                                        40102 -> throw Error("token无效，请使用正确的token")
-                                        40103 -> resumeStatus = Reconnect
-                                        40107 -> resumeStatus = Reconnect
-                                        40108 -> resumeStatus = Reconnect
-                                        else -> {
-                                            throw Exception("KOOK login failed: code is $code\n  @see <https://developer.kookapp.cn/doc/websocket>")
-                                        }
-                                    }
-                                }
-                                3 -> {
-                                    pingDelay = Calendar.getInstance().timeInMillis - pingStart
-                                    pingStatus = PingState.Success
-                                    logger.debug("pong, delay = $pingDelay ms")
-                                }
-                                5 -> {
-                                    resumeStatus = Reconnect
-                                    closeBlocking()
-                                }
-                                6 -> {
-                                    pingStatus = PingState.Success
-                                    status = State.Connected
-                                    sessionId = json.get("d").asJsonObject.get("session_id").asString
-                                    logger.info("resume ok!")
-                                }
-                            }
-                        }
-
-                        override fun onClose(code: Int, reason: String, remote: Boolean) {
-                            if (code == 1002) {
-                                status = State.Disconnected
-                                resumeStatus = Reconnect
-                                return
-                            }
-                            logger.info("websocket closed, code=$code, reason=$reason")
-                            if (status == State.Closed) return
-                            if (resumeStatus != None) return
-                            status = State.Disconnected
-                            resumeStatus = First
-                            // TODO: 官方的ws协议错误
-                        }
-
-                        override fun onError(ex: java.lang.Exception) {
-                            ex.printStackTrace()
-                        }
-                    }
+                    webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME))["url"].asString)
+                    sendRequest(requestBuilder(OFFLINE))
                     webSocketClient!!.connectBlocking(6000, TimeUnit.MILLISECONDS)
                     return webSocketClient?.isOpen == true
                 } catch (e: Exception) {
@@ -873,6 +809,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                                 webSocketClient?.close()
                             status = State.Connecting
                             webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY)).get("url").asString)
+                            sendRequest(requestBuilder(OFFLINE))
                             webSocketClient!!.connectBlocking(6000, TimeUnit.MILLISECONDS)
                             if (webSocketClient?.isOpen != true) {
                                 status = State.Disconnected

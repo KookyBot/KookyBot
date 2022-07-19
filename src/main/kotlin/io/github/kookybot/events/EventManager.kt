@@ -20,6 +20,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.exceptions.CommandSyntaxException
+import io.github.kookybot.annotation.Filter
 import io.github.kookybot.client.Client
 import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.contract.Guild
@@ -35,8 +36,10 @@ import io.github.kookybot.events.self.SelfMessageEvent
 import io.github.kookybot.message.SelfMessage
 import io.github.kookybot.utils.Emoji
 import kotlinx.coroutines.DelicateCoroutinesApi
+import org.apache.directory.api.ldap.model.cursor.Tuple
 import java.util.*
 import kotlin.reflect.KClass
+import kotlin.reflect.cast
 import io.github.kookybot.events.Listener as Listener1
 
 
@@ -110,6 +113,9 @@ class EventManager(
         }
     }
 
+    /**
+     * 不inline
+     */
     fun checkAndParseCommand(event: MessageEvent) {
         if (with(client) {
                 (config.enableCommand)
@@ -121,8 +127,37 @@ class EventManager(
         }
     }
 
-    inline fun <reified T : Event> callEvent(event: T) {
+    fun Filter.parse(input: String): Map<String, Any>? {
+        val list = mutableListOf<Tuple<String?, Regex>>()
+        val ret = mutableMapOf<String, String>()
+        var start = 0
+        while (pattern.contains('{')) {
+            val index = pattern.indexOf('{')
+            if (start != index) {
+                list.add(Tuple(null, Regex.fromLiteral(pattern.substring(start until index))))
+            }
+            start = pattern.indexOf('}')
+            val s = pattern.substring(index + 1 until start)
+            start += 1
+            var name = s
+            var regex = Regex("\\w+")
+            if (s.contains(',')) {
+                name = s.substring(0 until s.indexOf(','))
+                regex = Regex(s.substring(s.indexOf(',') + 1))
+            }
+            list.add(Tuple(name, regex))
+        }
+        if (start != pattern.length) {
+            list.add(Tuple(null, Regex.fromLiteral(pattern.substring(start until pattern.length))))
+        }
+        // parsing start
+        start = 0
+        for (item in list) {
+        }
+        return ret
+    }
 
+    inline fun <reified T : Event> callEvent(event: T) {
         if (event is CardButtonClickEvent) {
             clickEvents.forEach {
                 if (it.first == event.value)
@@ -146,6 +181,19 @@ class EventManager(
                         try {
                             if (method.parameterTypes[0] == T::class.java) {
                                 method.invoke(it, event)
+                            } else if (event is MessageEvent) {
+                                val filters = method.annotations.filter { it.annotationClass == Filter::class }
+                                    .map { Filter::class.cast(it) }
+                                for (filter in filters) {
+                                    println(filter.pattern)
+                                    filter.parse(event.content)?.let { args ->
+                                        if (method.parameters.map { it.name }.containsAll(args.keys)) {
+                                            method.parameters.forEach {
+
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -171,11 +219,9 @@ class EventManager(
                     timestamp = json.get("msg_timestamp").asInt,
                     target = when (event.channelType) {
                         MessageEvent.ChannelType.GROUP -> client.self!!.guilds.map {
-                            it.channels.firstOrNull {
-                                it.id == json.get("target_id").asString
-                            }
-                        }.firstOrNull { it != null }!!
-                        MessageEvent.ChannelType.PERSON -> client.self!!.chattingUsers.firstOrNull { it.id == json.get("target_id").asString }!!
+                            it.value.lazyChannels[json["target_id"].asString]?.value
+                        }.first { it != null }!!
+                        MessageEvent.ChannelType.PERSON -> client.self!!.chattingUsers[json["target_id"].asString]!!.value
                         else -> throw Exception("Invalid channel type.")
                     } as TextChannel,
                     content = json.get("content").asString
@@ -230,80 +276,87 @@ class EventManager(
                 "private_added_reaction" -> {
                     val directPostReactionEvent = Gson().fromJson(json, DirectPostReactionEvent::class.java)
                     directPostReactionEvent.sender =
-                        client.self!!.chattingUsers.find { it.code == event.extra.get("chat_code").asString }!!
+                        client.self!!.chattingUsers[event.extra["user_id"].asString]!!.value
                     directPostReactionEvent.sender.update()
                     directPostReactionEvent.emoji = Emoji(
                         event.extra.get("emoji").asJsonObject.get("id").asString,
                         event.extra.get("emoji").asJsonObject.get("name").asString
                     )
+                    directPostReactionEvent.content = event.extra["msg_id"].asString
                     directPostReactionEvent.self = client.self!!
                     callEvent(directPostReactionEvent)
                 }
                 "private_deleted_reaction" -> {
                     val directCancelReactionEvent = Gson().fromJson(json, DirectCancelReactionEvent::class.java)
                     directCancelReactionEvent.sender =
-                        client.self!!.chattingUsers.find { it.code == event.extra.get("chat_code").asString }!!
+                        client.self!!.chattingUsers[event.extra["user_id"].asString]!!.value
                     directCancelReactionEvent.sender.update()
                     directCancelReactionEvent.emoji = Emoji(
                         event.extra.get("emoji").asJsonObject.get("id").asString,
                         event.extra.get("emoji").asJsonObject.get("name").asString
                     )
+                    directCancelReactionEvent.content = event.extra["msg_id"].asString
                     directCancelReactionEvent.self = client.self!!
                     callEvent(directCancelReactionEvent)
                 }
                 "updated_guild" -> {
-                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("id").asString }!!
+                    val guild: Guild = client.self!!.guilds[event.extra["id"].asString]!!
                     guild.updateByJson(event.extra)
                     callEvent(GuildUpdateEvent(guild, client.self!!))
                 }
                 "deleted_guild" -> {
-                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("id").asString }!!
-                    (client.self!!.guilds as MutableList).removeIf { it.id == guild.id }
+                    val id = event.extra["id"].asString
+                    val guild: Guild = client.self!!.guilds[id]!!
+                    (client.self!!.guilds as MutableMap).remove(id)
                     callEvent(GuildDeleteEvent(guild, client.self!!))
                 }
                 "added_channel" -> {
-                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("guild_id").asString }!!
+                    val guild: Guild = client.self!!.guilds[event.extra["guild_id"].asString]!!
                     guild.update()
-                    val channel = guild.channels.find { it.id == event.extra.get("id").asString }!!
+                    val channel = guild.lazyChannels[event.extra["id"].asString]!!.value
                     callEvent(ChannelAddedEvent(channel, client.self!!))
                 }
                 "updated_channel" -> {
-                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("guild_id").asString }!!
-                    guild.update()
-                    val channel = guild.channels.find { it.id == event.extra.get("id").asString }!!
+                    val channel =
+                        client.self!!.guilds[event.extra["guild_id"].asString]!!.lazyChannels[event.extra["id"].asString]!!.value
+                    channel.update()
                     callEvent(ChannelUpdateEvent(channel, client.self!!))
                 }
                 "deleted_channel" -> {
-                    val guild: Guild = client.self!!.guilds.find { it.id == event.extra.get("guild_id").asString }!!
-                    val channel = guild.channels.find { it.id == event.extra.get("id").asString }!!
-                    guild.channels -= channel
-                    callEvent(ChannelDeletedEvent(channel, client.self!!))
+                    val id = event.extra["id"].asString
+                    val guild: Guild = client.self!!.guilds[event.extra["guild_id"].asString]!!
+                    val channel = guild.lazyChannels[id].let {
+                        if (it?.isInitialized() == true) it.value
+                        else null
+                    }
+                    (guild.lazyChannels as MutableMap).remove(id)
+                    callEvent(ChannelDeletedEvent(id, channel, client.self!!))
                 }
                 "updated_guild_member" -> {
-                    val guild = client.self!!.guilds.find { it.id == event.targetId }!!
+                    val guild = client.self!!.guilds[event.targetId]!!
                     val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
                     user.update()
                     callEvent(GuildMemberUpdateEvent(client.self!!, guild, user, user.nickname))
                 }
                 "joined_guild" -> {
-                    val guild = client.self!!.guilds.find { it.id == event.targetId }!!
+                    val guild = client.self!!.guilds[event.targetId]!!
                     val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
                     callEvent(GuildUserJoinEvent(client.self!!, guild, user))
                 }
                 "exited_guild" -> {
-                    val guild = client.self!!.guilds.find { it.id == event.targetId }!!
+                    val guild = client.self!!.guilds[event.targetId]!!
                     val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
                     callEvent(GuildUserExitEvent(client.self!!, guild, user))
                 }
                 "self_joined_guild" -> {
-                    val guild = Guild(client, event.extra.get("guild_id").asString)
+                    val guild = Guild(client, event.extra["guild_id"].asString)
                     guild.update()
-                    (client.self!!.guilds as MutableList).add(guild)
+                    (client.self!!.guilds as MutableMap) += (event.extra["guild_id"].asString to guild)
                     callEvent(SelfJoinedGuildEvent(client.self!!, guild))
                 }
                 "self_exited_guild" -> {
-                    val guild = client.self!!.guilds.find { it.id == event.extra.get("guild_id").asString }!!
-                    (client.self!!.guilds as MutableList).remove(guild)
+                    val guild = client.self!!.guilds[event.extra["guild_id"].asString]!!
+                    (client.self!!.guilds as MutableMap).remove(event.extra["guild_id"].asString)
                     callEvent(SelfExitedGuildEvent(client.self!!, guild))
                 }
                 "added_block_list" -> {
@@ -328,21 +381,20 @@ class EventManager(
             }
         } else if (event.channelType == MessageEvent.ChannelType.GROUP) {
             val channelMessageEvent = Gson().fromJson(json, ChannelMessageEvent::class.java)
-            val guild = client.self!!.guilds.firstOrNull { it.id == json["extra"].asJsonObject["guild_id"].asString }
+            val guild = client.self!!.guilds[json["extra"].asJsonObject["guild_id"].asString]
             channelMessageEvent.guild = guild!!
-            val channel = guild.channels.firstOrNull { it.id == json["target_id"].asString }
-            channelMessageEvent.channel = channel!! as TextChannel
+            val channel = guild.lazyChannels[json["target_id"].asString]!!.value
+            channelMessageEvent.channel = channel as TextChannel
             val user = client.self!!.getGuildUser(json["author_id"].asString, guild.id)!!
             channelMessageEvent.sender = user
             callEvent(channelMessageEvent)
         } else if (event.channelType == MessageEvent.ChannelType.PERSON) {
             // process
-            if (client.self!!.chattingUsers.find { it.id == event.authorId } == null) {
+            if (client.self!!.chattingUsers[event.authorId] == null) {
                 client.self!!.updatePrivateChatUser(event.authorId)
             }
             val directMessageEvent = Gson().fromJson(json, DirectMessageEvent::class.java)
-            directMessageEvent.sender =
-                client.self!!.chattingUsers.find { it.code == json.get("extra").asJsonObject.get("code").asString }!!
+            directMessageEvent.sender = client.self!!.chattingUsers[event.authorId]!!.value
             directMessageEvent.sender.update()
             callEvent(directMessageEvent)
         }

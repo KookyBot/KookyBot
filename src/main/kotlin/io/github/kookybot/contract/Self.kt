@@ -24,7 +24,7 @@ class Self(
 ) {
     val logger = LoggerFactory.getLogger(this::class.java)
     val id: String
-    val guilds: List<Guild> =
+    val guilds: Map<String, Guild> =
         with(client) {
             sendRequest(requestBuilder(Client.RequestType.GUILD_LIST))
                 .asJsonObject.get("items").asJsonArray.map { item ->
@@ -35,35 +35,43 @@ class Self(
                     } catch (e: Exception) {
                         logger.error("初始化服务器缓存对象时发生异常，请检查错误或提交issue", e)
                         null
+                    }?.let {
+                        it.id to it
                     }
-                }.filterNotNull().toMutableList()
+                }.filterNotNull().toMap().toMutableMap()
         }
-    val chattingUsers: List<PrivateChatUser> =
+    val chattingUsers: Map<String, Lazy<PrivateChatUser>> =
         with(client) {
             sendRequest(requestBuilder(Client.RequestType.USER_CHAT_LIST))
                 .asJsonObject.get("items").asJsonArray.map { item ->
-                    try {
-                        val user = PrivateChatUser(code = item.asJsonObject.get("code").asString,
-                            client = client,
-                            id = item.asJsonObject["target_info"].asJsonObject["id"].asString)
-                        user.update()
-                        return@map user
-                    } catch (e: Exception) {
-                        logger.error("初始化私聊会话缓存对象时发生异常，请检查错误或提交issue", e)
-                        return@map null
+                    val id = item.asJsonObject["target_info"].asJsonObject["id"].asString
+                    id to lazy {
+                        try {
+                            val user = PrivateChatUser(
+                                code = item.asJsonObject.get("code").asString,
+                                client = client,
+                                id = id
+                            )
+                            user.update()
+                            user
+                        } catch (e: Exception) {
+                            logger.error("初始化私聊会话缓存对象时发生异常，请检查错误或提交issue", e)
+                            throw e
+                        }
                     }
-                }.filterNotNull().toMutableList()
+                }.toMap().toMutableMap()
         }
     fun getUser(userId: String): User {
         return client.getUser(userId)
     }
 
     fun getChannel(id: String): Channel? {
-        return guilds.map { guild -> guild.channels.firstOrNull { channel -> channel.id == id } }.firstOrNull { it != null }
+        return guilds.values.map { guild -> guild.lazyChannels.entries.firstOrNull { it.key == id } }
+            .firstOrNull()?.value?.value
     }
 
     fun getGuildUser(id: String, guild: String): GuildUser? {
-        return guilds.firstOrNull { it.id == guild }?.getGuildUser(id)
+        return guilds[guild]?.getGuildUser(id)
     }
 
     internal fun updatePrivateChatUser(userId: String): PrivateChatUser {
@@ -73,7 +81,7 @@ class Self(
         }!!.asJsonObject.get("code").asString
         val user = PrivateChatUser(code = code, client = client, id = userId)
         user.update()
-        (chattingUsers as MutableList).add(user)
+        (chattingUsers as MutableMap) += (userId to lazyOf(user))
         return user
     }
 
