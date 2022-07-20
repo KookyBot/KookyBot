@@ -223,11 +223,17 @@ class EventManager(
                                             )
                                             else -> throw Exception("invalid type")
                                         }
-                                        parsingResult["source"] = "null*/*"
-                                        if (method.parameters.map { it.name }.contains("arg0")) {
 
-                                        } else if (func != null && parsingResult.keys.containsAll(func.parameters.map { it.name }
-                                                .filterNotNull())) {
+                                        parsingResult["source"] = source
+                                        if (func == null) return@let
+                                        if ((method.parameters.isNotEmpty()) && (!func.parameters.map {
+                                                it.name?.matches(
+                                                    Regex("^arg\\d+$")
+                                                )
+                                            }.contains(false))) {
+                                            // java method, ordered.
+                                            method.invoke(it, *parsingResult.values.toTypedArray())
+                                        } else if (parsingResult.keys.containsAll(func.parameters.mapNotNull { it.name })) {
                                             func.parameters.mapIndexed { index, parameter ->
                                                 var name = parameter.name
                                                 if (name == null) {
