@@ -131,19 +131,19 @@ class EventManager(
         val list = mutableListOf<Tuple<String?, Regex>>()
         val ret = mutableMapOf<String, String>()
         var start = 0
-        while (pattern.contains('{')) {
-            val index = pattern.indexOf('{')
+        while (pattern.indexOf('{', start) != -1) {
+            val index = pattern.indexOf('{', start)
             if (start != index) {
                 list.add(Tuple(null, Regex.fromLiteral(pattern.substring(start until index))))
             }
-            start = pattern.indexOf('}')
+            start = pattern.indexOf('}', index)
             val s = pattern.substring(index + 1 until start)
             start += 1
             var name = s
-            var regex = Regex("\\w+")
+            var regex = Regex("^\\w+")
             if (s.contains(',')) {
-                name = s.substring(0 until s.indexOf(','))
-                regex = Regex(s.substring(s.indexOf(',') + 1))
+                name = s.substring(0 until s.indexOf(',', start))
+                regex = Regex(s.substring(s.indexOf(',', start) + 1))
             }
             list.add(Tuple(name, regex))
         }
@@ -160,8 +160,13 @@ class EventManager(
     inline fun <reified T : Event> callEvent(event: T) {
         if (event is CardButtonClickEvent) {
             clickEvents.forEach {
-                if (it.first == event.value)
-                    it.second(event)
+                if (it.first == event.value) {
+                    try {
+                        it.second(event)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             }
         }
         if (event is MessageEvent) {
@@ -189,7 +194,6 @@ class EventManager(
                                     filter.parse(event.content)?.let { args ->
                                         if (method.parameters.map { it.name }.containsAll(args.keys)) {
                                             method.parameters.forEach {
-
                                             }
                                         }
                                     }

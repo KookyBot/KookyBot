@@ -499,7 +499,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         val json = Gson().fromJson(response.body(), JsonObject::class.java)
         when (json.get("code").asInt) {
             0 -> {
-                return try {
+                return let {
                     if (json.has("items") && json.get("items").isJsonArray && !request.uri().query.contains("page")) {
                         val meta = json.get("meta").asJsonObject
                         val total = meta.get("page_total").asInt
@@ -519,13 +519,10 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                             }
                         }
                     }
-                    json.get("data").asJsonObject
-                } catch (e: Exception) {
-                    if (json.has("data") && json.get("data").isJsonArray)
-                        JsonObject()
-                    else
-                        throw e
-                    // 官方bug，特殊处理
+                    if (json.has("data") && json.get("data").isJsonArray && json["data"].asJsonArray.size() == 0) {
+                        json.add("data", JsonObject())// 官方bug，特殊处理
+                    }
+                    return@let json["data"].asJsonObject
                 }
             }
             else -> {
@@ -539,6 +536,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
             val id = UUID.randomUUID().toString()
             override fun onOpen(handshakedata: ServerHandshake) {
                 logger.debug("websocket opened: http status=${handshakedata.httpStatus}, id=$id")
+
             }
 
             override fun onMessage(bytes: ByteBuffer?) {
@@ -595,6 +593,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
             }
 
             override fun onClose(code: Int, reason: String, remote: Boolean) {
+                if (webSocketClient !== this) return
                 if (code == 1002) {
                     logger.error("invalid frame, closed.")
                     status = State.Disconnected
@@ -781,10 +780,16 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
             if (resumeStatus == None) continue
             fun resume(): Boolean {
                 try {
-                    webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME))["url"].asString)
                     sendRequest(requestBuilder(OFFLINE))
+                    webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY_RESUME))["url"].asString)
                     webSocketClient!!.connectBlocking(6000, TimeUnit.MILLISECONDS)
-                    return webSocketClient?.isOpen == true
+                    webSocketClient?.send("{\"s\":4,\"sn\":$lastSn}")
+                    if (webSocketClient?.isOpen == true) {
+                        resumeStatus = None
+                        pingStatus = PingState.Success
+                        status = State.Connected
+                        return true
+                    } else return false
                 } catch (e: Exception) {
                     e.printStackTrace()
                     return false
@@ -797,9 +802,9 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                         resumeStatus = Second
                 }
                 Second -> {
-                    logger.error("resume - first")
+                    logger.error("resume - second")
                     if (!resume())
-                        resumeStatus = Second
+                        resumeStatus = Reconnect
                 }
                 Reconnect -> {
                     while (true) {
@@ -808,8 +813,8 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                             if (webSocketClient?.isClosed != true)
                                 webSocketClient?.close()
                             status = State.Connecting
-                            webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY)).get("url").asString)
                             sendRequest(requestBuilder(OFFLINE))
+                            webSocketClient = initWebsocket(sendRequest(requestBuilder(GATEWAY)).get("url").asString)
                             webSocketClient!!.connectBlocking(6000, TimeUnit.MILLISECONDS)
                             if (webSocketClient?.isOpen != true) {
                                 status = State.Disconnected
