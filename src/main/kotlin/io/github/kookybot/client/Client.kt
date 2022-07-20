@@ -30,10 +30,7 @@ import io.github.kookybot.client.ResumeStatus.*
 import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.commands.PermissionManager
 import io.github.kookybot.commands.UserArgumentType
-import io.github.kookybot.contract.Self
-import io.github.kookybot.contract.TextChannel
-import io.github.kookybot.contract.User
-import io.github.kookybot.contract.UserState
+import io.github.kookybot.contract.*
 import io.github.kookybot.data
 import io.github.kookybot.events.EventManager
 import io.github.kookybot.events.MessageEvent
@@ -87,18 +84,17 @@ enum class ResumeStatus {
 class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = null) {
     private val logger = LoggerFactory.getLogger(Client::class.java)
     private val context: CoroutineContext = EmptyCoroutineContext
-    private val debug = true
     private var lastSn = 0
     private var sessionId = ""
-    private var resumeTimes = 0
     var resumeStatus: ResumeStatus = None
-    var voiceWebSocketClient: WebSocketClient? = null
     var pingDelay = 0L
     var status = State.Initialized
     var pingStatus = PingState.Success
     var self: Self? = null
     private var webSocketClient: WebSocketClient? = null
-    val config = ConfigureScope(this)
+    private val httpClient = HttpClient.newHttpClient()
+    internal val config = ConfigureScope(this)
+    var currentVoiceChannel: VoiceChannel? = null
 
     // configure client
     init {
@@ -107,13 +103,25 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         }
         if (!config.dataFolder.isDirectory)
             config.dataFolder.mkdir()
+        if (config.botMarketUUID != "") {
+            GlobalScope.launch {
+                while (true) {
+                    httpClient.send(
+                        HttpRequest.newBuilder()
+                            .uri(URI("http://bot.gekj.net/api/v1/online.bot"))
+                            .header("uuid", config.botMarketUUID)
+                            .build(), BodyHandlers.ofString()
+                    ).body()
+                    delay(30 * 60)
+                }
+            }
+        }
     }
 
-    private val httpClient = HttpClient.newHttpClient()
     val permissionManager = PermissionManager(this)
     val eventManager = EventManager(this)
 
-    init {
+    init { // initialize default commands.
         if (config.defaultCommand) {
             eventManager.dispatcher.run {
                 register(LiteralArgumentBuilder.literal<CommandSource?>("help")
@@ -123,7 +131,8 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                         )
                         0
                     }
-                    .then(RequiredArgumentBuilder.argument<CommandSource?, String?>(
+                    .then(
+                        RequiredArgumentBuilder.argument<CommandSource?, String?>(
                         "command",
                         StringArgumentType.greedyString()
                     )
@@ -256,19 +265,6 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                 )
             }
         }
-        if (config.botMarketUUID != "") {
-            GlobalScope.launch {
-                while (true) {
-                    httpClient.send(
-                        HttpRequest.newBuilder()
-                            .uri(URI("http://bot.gekj.net/api/v1/online.bot"))
-                            .header("uuid", config.botMarketUUID)
-                            .build(), BodyHandlers.ofString()
-                    ).body()
-                    delay(30 * 60)
-                }
-            }
-        }
     }
 
     /**
@@ -281,6 +277,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         var enableCommand = true
         var enablePermission = true
         var botMarketUUID = ""
+        var responseCommandExceptions = true
         internal var commandPrefix = listOf("/")
         internal var dataFolder = File("data/")
         internal var defaultCommand = false

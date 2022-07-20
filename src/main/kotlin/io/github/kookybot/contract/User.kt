@@ -42,23 +42,49 @@ enum class UserState {
  * 请使用：[PrivateChatUser]和[GuildUser]，他们可以保证最新
  */
 open class User(
-    @Transient
-    override var client: Client,
+    client: Client,
     override val id: String,
-    var online: Boolean = false,
-    @SerializedName("username")
-    var name: String = "",
-    @field:SerializedName("identify_num") var identifyNumber: String = "",
-    @field:Transient @DontUpdate var status: UserState = UserState.NORMAL,
-    var bot: Boolean = false,
-    @field:SerializedName("mobile_verified") var mobilePhoneVerified: Boolean = false,
-    @field:SerializedName("avatar") var avatarUrl: String = "",
-    @field:SerializedName("vip_avatar") var vipAvatarUrl: String = "",
-    /**
-     * 不要使用，正在试图修复兼容性问题
-     */
-    @field:SerializedName("is_vip") var isVip: Boolean = false,
+    online: Boolean = false,
+    name: String = "",
+    idNum: String = "",
+    status: UserState = UserState.NORMAL,
+    bot: Boolean = false,
+    mobilePhoneVerified: Boolean = false,
+    avatarUrl: String = "",
+    vipAvatarUrl: String = "",
+    isVip: Boolean = false,
 ) : MessageReceiver, Updatable {
+    @Transient
+    override var client: Client = client
+        internal set
+    var online: Boolean = online
+        internal set
+
+    @SerializedName("username")
+    var name: String = name
+        internal set
+    @field:SerializedName("identify_num")
+    var identifyNumber: String = idNum
+        internal set
+    @field:Transient
+    @DontUpdate
+    var status: UserState = status
+        internal set
+    var bot: Boolean = bot
+        internal set
+    @field:SerializedName("mobile_verified")
+    var mobilePhoneVerified: Boolean = mobilePhoneVerified
+        internal set
+    @field:SerializedName("avatar")
+    var avatarUrl: String = avatarUrl
+        internal set
+    @field:SerializedName("vip_avatar")
+    var vipAvatarUrl: String = vipAvatarUrl
+        internal set
+    @field:SerializedName("is_vip")
+    var isVip: Boolean = isVip
+        internal set
+
     override fun sendMessage(message: Message): SelfMessage {
         return client.sendUserMessage(
             target = this,

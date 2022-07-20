@@ -34,42 +34,43 @@ class Guild(
 ): Updatable {
     @field:SerializedName("master_id")
     var masterId: String = ""
-
+        internal set
     @field:SerializedName("name")
     var name: String = ""
-
+        internal set
     @field:SerializedName("topic")
     var topic: String = ""
-
+        internal set
     @field:SerializedName("icon")
     var iconUrl: String = ""
-
+        internal set
     @field:SerializedName("notify_type")
     var notifyType: NotifyType = NotifyType.NONE
-
+        internal set
     @field:SerializedName("region")
     var region: String = ""
-
+        internal set
     @field:Transient
     var defaultChannel: TextChannel? = null
-
+        internal set
     @field:Transient
     var welcomeChannel: TextChannel? = null
-
+        internal set
     @field:SerializedName("open_id")
             /**
              * 公开邀请链接id，为null说明不公开
              */
     var openId: Int? = null
-
+        internal set
     @field:SerializedName("level")
     var level: Int = 0
-
+        internal set
     @field:SerializedName("boost_num")
     var boostCount: Int = 0
-
+        internal set
     @field:Transient
     var categories: Map<String, Category> = mutableMapOf()
+        internal set
     var lazyUsers: MutableMap<String, Lazy<GuildUser>> =
         client.sendRequest(client.requestBuilder(Client.RequestType.GUILD_USER_LIST, "guild_id" to id))
             .get("items").asJsonArray.map { it.asJsonObject.get("id").asString }.map {
@@ -79,12 +80,12 @@ class Guild(
                     return@lazy user
                 }
             }.toMap().toMutableMap()
-
+        internal set
     var lazyChannels: Map<String, Lazy<Channel>> = mutableMapOf()
-
+        internal set
     @field:DontUpdate
     var roleMap: Map<Int, GuildRole> = mapOf()
-
+        internal set
     val owner: User get() = client.getUser(masterId)
     val botPermission: Permission = PermissionImpl.Permissions.None
 
@@ -202,8 +203,7 @@ class Guild(
         val category = Category(
             client = client,
             id = json.get("id").asString,
-            guild = this,
-            name = name
+            guild = this
         )
         category.update()
         (categories as MutableMap) += (json.get("id").asString to category)

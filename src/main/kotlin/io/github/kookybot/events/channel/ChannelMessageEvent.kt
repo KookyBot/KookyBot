@@ -36,5 +36,7 @@ open class ChannelMessageEvent(
     authorId: String,
     content: String,
     sid: String,
-    timestamp: String
-): MessageEvent(self, _channelType, _type, targetId, authorId, content, sid, timestamp)
+    timestamp: String,
+) : MessageEvent(self, _channelType, _type, targetId, authorId, content, sid, timestamp) {
+
+}

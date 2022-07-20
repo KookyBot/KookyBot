@@ -10,20 +10,51 @@ class VoiceChannel(
     id: String,
     guild: Guild
 ) : Channel(client, id, guild) {
+    var voiceWebSocketClient: WebSocketClient = object : WebSocketClient(URI("https://example.com")) {
+        override fun onOpen(handshakedata: ServerHandshake?) {
+            TODO("Not yet implemented")
+        }
+
+        override fun onMessage(message: String?) {
+            TODO("Not yet implemented")
+        }
+
+        override fun onClose(code: Int, reason: String?, remote: Boolean) {
+            TODO("Not yet implemented")
+        }
+
+        override fun onError(ex: java.lang.Exception?) {
+            TODO("Not yet implemented")
+        }
+
+    }
+
+    fun disconnect() {
+
+    }
+
     fun connect() {
-        client.voiceWebSocketClient?.closeBlocking()
-        client.voiceWebSocketClient = null
-        client.voiceWebSocketClient = object : WebSocketClient(
-            URI(with(client) { sendRequest(requestBuilder(Client.RequestType.VOICE_GATEWAY, "channel_id" to id)) }.get("data").asJsonObject.get("gateway_url").asString),
+        client.currentVoiceChannel?.disconnect()
+        client.currentVoiceChannel = this
+        voiceWebSocketClient = object : WebSocketClient(
+            URI(with(client) {
+                sendRequest(
+                    requestBuilder(
+                        Client.RequestType.VOICE_GATEWAY,
+                        "channel_id" to id
+                    )
+                )
+            }.get("data").asJsonObject.get("gateway_url").asString),
 
             mapOf("Authorization" to "Bot ${client.token}")
         ) {
             override fun onOpen(handshakedata: ServerHandshake?) {
-                send("{\n" +
-                        "    \"request\": true,\n" +
-                        "    \"id\": 5884630,\n" +
-                        "    \"method\": \"getRouterRtpCapabilities\",\n" +
-                        "    \"data\": {}\n" +
+                send(
+                    "{\n" +
+                            "    \"request\": true,\n" +
+                            "    \"id\": 5884630,\n" +
+                            "    \"method\": \"getRouterRtpCapabilities\",\n" +
+                            "    \"data\": {}\n" +
                         "}")
                 send("{\n" +
                         "    \"request\": true,\n" +

@@ -38,21 +38,30 @@ abstract class Channel(
     val guild: Guild,
 ): Updatable {
     var name: String = ""
+        internal set
     @field:Transient
     var parent: Category? = null
+        internal set
     var topic: String = ""
+        internal set
     @field:SerializedName("permission_sync")
     var permissionSync: Int = 0
+        internal set
     var level: Int = 0
+        internal set
     @field:SerializedName("slow_mode")
     var slowMode: Int = 0
+        internal set
     @field:DontUpdate
     var permissionOverwrites: List<RolePermissionOverwrite> = listOf()
+        internal set
     @field:DontUpdate
     var permissionUsers: List<UserPermissionOverwrite> = listOf()
+        internal set
 
     @field:DontUpdate
     var type: ChannelType = ChannelType.UNKNOWN
+        internal set
 
     data class RolePermissionOverwrite(
         val role: GuildRole,

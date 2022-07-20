@@ -22,8 +22,7 @@ import io.github.kookybot.utils.Emoji
 
 class DirectPostReactionEvent(
     self: Self,
-    @field:Transient
-    var emoji: Emoji,
+    emoji: Emoji,
     sender: PrivateChatUser,
     _channelType: String,
     _type: Int,
@@ -32,4 +31,8 @@ class DirectPostReactionEvent(
     content: String,
     sid: String,
     timestamp: String,
-): DirectMessageEvent(self, sender, _channelType, _type, targetId, authorId, content, sid, timestamp)
+) : DirectMessageEvent(self, sender, _channelType, _type, targetId, authorId, content, sid, timestamp) {
+    @field:Transient
+    var emoji: Emoji = emoji
+        internal set
+}

@@ -20,34 +20,56 @@ import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
 import io.github.kookybot.client.Client
 import io.github.kookybot.contract.Self
+import io.github.kookybot.contract.User
 import io.github.kookybot.events.self.SelfReactionEvent
 import io.github.kookybot.utils.Emoji
+import org.apache.directory.api.ldap.model.cursor.Tuple
 
 open class MessageEvent(
-    @field:Transient
-    override var self: Self,
+    self: Self,
     @field:SerializedName("channel_type")
     private var _channelType: String,
     @field:SerializedName("type")
     private var _type: Int,
+    targetId: String,
+    authorId: String,
+    content: String,
+    messageId: String,
+    timestamp: String,
+    extra: JsonObject = JsonObject(),
+) : Event {
+    @field:Transient
+    override var self: Self = self
+        internal set
+
     @field:SerializedName("target_id")
-    var targetId: String,
+    var targetId: String = targetId
+        internal set
+
     @field:SerializedName("author_id")
-    /**
-     * 非必要不建议使用，需要请issue
-     */
-    var authorId: String,
+            /**
+             * 非必要不建议使用，需要请issue
+             */
+    var authorId: String = authorId
+        internal set
+
     @field:SerializedName("content")
-    /**
-     * 非必要不建议使用，需要请issue
-     */
-    var content: String,
+            /**
+             * 非必要不建议使用，需要请issue
+             */
+    var content: String = content
+        internal set
+
     @field:SerializedName("message_id")
-    var messageId: String,
+    var messageId: String = messageId
+        internal set
+
     @field:SerializedName("msg_timestamp")
-    var timestamp: String,
-    var extra: JsonObject = JsonObject(),
-): Event {
+    var timestamp: String = timestamp
+        internal set
+    var extra: JsonObject = extra
+        internal set
+
     enum class EventType {
         UNKNOWN,
         PLAIN_TEXT,
@@ -59,12 +81,14 @@ open class MessageEvent(
         CARD,
         SYSTEM
     }
+
     enum class ChannelType {
         GROUP,
         BROADCAST,
         PERSON,
         UNKNOWN
     }
+
     val eventType get() = when (_type) {
         1 -> EventType.PLAIN_TEXT
         2 -> EventType.IMAGE
@@ -82,12 +106,14 @@ open class MessageEvent(
         "PERSON" -> ChannelType.PERSON
         else -> ChannelType.UNKNOWN
     }
+
     fun postReaction(emoji: Emoji): SelfReactionEvent {
         with(self.client) {
             sendRequest(requestBuilder(Client.RequestType.ADD_REACTION, "emoji" to emoji.id, "msg_id" to messageId))
         }
         return SelfReactionEvent(this,emoji,self)
     }
-    val reactions: Map<Emoji, Int>
+
+    val reactions: List<Tuple<out User, Emoji>>
         get() = TODO()
 }

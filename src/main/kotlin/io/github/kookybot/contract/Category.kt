@@ -27,8 +27,10 @@ class Category (
     val id: String,
     @field:Transient
     val guild: Guild,
-    var name: String = "",
 ): Updatable {
+    var name: String = ""
+        internal set
+
     @field:Transient
     val children: MutableList<Channel> = mutableListOf()
     override fun update() {

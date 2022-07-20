@@ -1,11 +1,13 @@
 package io.github.kookybot.test.api;
 
 import io.github.kookybot.JavaBaseClass;
+import io.github.kookybot.annotation.Filter;
 import io.github.kookybot.client.Client;
+import io.github.kookybot.commands.CommandSource;
 import io.github.kookybot.contract.Self;
-import io.github.kookybot.events.channel.ChannelMessageEvent;
 import io.github.kookybot.events.EventHandler;
 import io.github.kookybot.events.Listener;
+import io.github.kookybot.events.channel.ChannelMessageEvent;
 import io.github.kookybot.message.CardMessage;
 
 import java.io.BufferedReader;
@@ -19,6 +21,13 @@ public class JavaApiTest extends JavaBaseClass {
         public void onChannelMessage(ChannelMessageEvent event) {
             System.out.println(event.getContent());
         }
+
+        @EventHandler
+        @Filter(pattern = ".echo num {num,\\d+}")
+        public void channelQC(String num, CommandSource commandSource) {
+            commandSource.sendMessage(num);
+        }
+
         @EventHandler
         public void onHello(ChannelMessageEvent event) {
             if (event.getContent().contains("hello")) {

@@ -27,7 +27,7 @@ class ChannelDeletedEvent(
      *
      * 如果没有被缓存过，这将会是null
      *
-     * 对于任何频道，您都可以使用[Channel]缓存之
+     * 对于任何频道，您都可以使用[Channel.update]缓存之
      */
     val channel: Channel?,
     override val self: Self,

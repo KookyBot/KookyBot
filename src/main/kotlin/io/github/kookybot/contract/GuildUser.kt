@@ -29,7 +29,6 @@ class GuildUser(
     val guild: Guild,
     online: Boolean = false,
     name: String = "",
-    var nickname: String = "",
     identifyNumber: String = "",
     status: UserState = UserState.NORMAL,
     bot: Boolean = false,
@@ -37,12 +36,6 @@ class GuildUser(
     avatarUrl: String = "",
     vipAvatarUrl: String = "",
     isVip: Boolean = false,
-    @field:DontUpdate
-    val roles: List<GuildRole> = listOf(),
-    @field:SerializedName("joined_at")
-    var joinTime: Int = 0,
-    @field:SerializedName("active_time")
-    var activeTime: Int = 0,
 ) : User(client,
     id,
     online,
@@ -54,12 +47,34 @@ class GuildUser(
     avatarUrl,
     vipAvatarUrl,
     isVip), Updatable {
+
+    var nickname: String = ""
+        internal set
+
+    @field:DontUpdate
+    var roles: List<GuildRole> = listOf()
+        internal set
+
+    @field:SerializedName("joined_at")
+    var joinTime: Int = 0
+        internal set
+
+    @field:SerializedName("active_time")
+    var activeTime: Int = 0
+        internal set
+
     override fun updateByJson(jsonElement: JsonElement) {
         super<User>.updateByJson(jsonElement)
     }
+
     override fun update() {
         updateByJson(with(client) {
-            sendRequest(requestBuilder(Client.RequestType.USER_VIEW, mapOf("user_id" to id, "guild_id" to guild.id))).asJsonObject
+            sendRequest(
+                requestBuilder(
+                    Client.RequestType.USER_VIEW,
+                    mapOf("user_id" to id, "guild_id" to guild.id)
+                )
+            ).asJsonObject
         })
     }
 

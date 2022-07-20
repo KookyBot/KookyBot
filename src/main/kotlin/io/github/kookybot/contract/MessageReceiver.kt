@@ -23,6 +23,8 @@ import io.github.kookybot.message.Message
 import io.github.kookybot.message.SelfMessage
 
 interface MessageReceiver {
+    abstract val id: String
+    abstract val client: Client
     fun sendMessage(message: Message): SelfMessage {
         when (this) {
             is TextChannel -> {
@@ -45,6 +47,4 @@ interface MessageReceiver {
         }
         throw Exception("invalid type")
     }
-    abstract val id: String
-    abstract val client: Client
 }

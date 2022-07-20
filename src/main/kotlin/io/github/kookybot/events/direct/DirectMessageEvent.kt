@@ -22,13 +22,16 @@ import io.github.kookybot.events.MessageEvent
 
 open class DirectMessageEvent(
     self: Self,
-    @field:Transient
-    var sender: PrivateChatUser,
+    sender: PrivateChatUser,
     _channelType: String,
     _type: Int,
     targetId: String,
     authorId: String,
     content: String,
     sid: String,
-    timestamp: String
-): MessageEvent(self, _channelType, _type, targetId, authorId, content, sid, timestamp)
+    timestamp: String,
+) : MessageEvent(self, _channelType, _type, targetId, authorId, content, sid, timestamp) {
+    @field:Transient
+    var sender: PrivateChatUser = sender
+        internal set
+}

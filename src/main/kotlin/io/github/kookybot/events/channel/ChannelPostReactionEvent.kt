@@ -21,10 +21,9 @@ import io.github.kookybot.contract.Self
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.utils.Emoji
 
-class ChannelPostReactionEvent (
+class ChannelPostReactionEvent(
     self: Self,
-    @field:Transient
-    var emoji: Emoji,
+    emoji: Emoji,
     channel: TextChannel,
     sender: GuildUser,
     guild: Guild,
@@ -34,5 +33,21 @@ class ChannelPostReactionEvent (
     authorId: String,
     content: String,
     sid: String,
-    timestamp: String
-): ChannelMessageEvent(self, channel, sender, guild, _channelType, _type, targetId, authorId, content, sid, timestamp)
+    timestamp: String,
+) : ChannelMessageEvent(
+    self,
+    channel,
+    sender,
+    guild,
+    _channelType,
+    _type,
+    targetId,
+    authorId,
+    content,
+    sid,
+    timestamp
+) {
+    @field:Transient
+    var emoji: Emoji = emoji
+        internal set
+}

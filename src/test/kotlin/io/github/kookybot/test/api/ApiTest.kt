@@ -31,8 +31,8 @@ public class MyListener : Listener {
     }
 
     @EventHandler
-    @Filter(".echo {content}")
-    fun test(content: String, source: CommandSource, message: String) {
+    @Filter(".echo {content,\\d+}")
+    fun test(content: String, source: CommandSource) {
         source.sendMessage(content)
     }
 }

@@ -39,10 +39,48 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import org.apache.directory.api.ldap.model.cursor.Tuple
 import java.util.*
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 import kotlin.reflect.cast
+import kotlin.reflect.jvm.kotlinFunction
 import io.github.kookybot.events.Listener as Listener1
 
 
+fun Filter.parse(input: String): Map<String, Any>? {
+    val list = mutableListOf<Tuple<String?, Regex>>()
+    val ret = mutableMapOf<String, String>()
+    var start = 0
+    while (pattern.indexOf('{', start) != -1) {
+        val index = pattern.indexOf('{', start)
+        if (start != index) {
+            list.add(Tuple(null, Regex.fromLiteral(pattern.substring(start until index))))
+        }
+        start = pattern.indexOf('}', index)
+        val s = pattern.substring(index + 1 until start)
+        start += 1
+        var name = s
+        var regex = Regex("\\w+")
+        if (s.contains(',')) {
+            name = s.substring(0 until s.indexOf(','))
+            regex = Regex(s.substring(s.indexOf(',') + 1))
+        }
+        list.add(Tuple(name, regex))
+    }
+    if (start != pattern.length) {
+        list.add(Tuple(null, Regex.fromLiteral(pattern.substring(start until pattern.length))))
+    }
+    // parsing start
+    start = 0
+    for (item in list) {
+        val result = item.value.matchAt(input, start)
+        if (result?.range?.start != start)
+            return null
+        if (item.key != null) {
+            ret[item.key!!] = result.value
+        }
+        start = result.range.last + 1
+    }
+    return ret
+}
 class SingleEventHandler<T>(
     var handler: (T) -> Unit,
     private val eventManager: EventManager
@@ -80,6 +118,7 @@ class EventManager(
     }
 
     fun parseCommand(event: MessageEvent) {
+        if (!client.config.enableCommand) return
         if (client.config.commandPrefix.map { event.content.startsWith(it) }.find { it } == null) return
         val source = when (event) {
             is ChannelMessageEvent -> CommandSource(
@@ -99,15 +138,19 @@ class EventManager(
         try {
             dispatcher.execute(event.content.substring(1), source)
         } catch (e: CommandSyntaxException) {
-            when (event) {
-                is DirectMessageEvent -> event.sender.sendMessage("命令语法不正确。详细信息：\n```\n${e.localizedMessage}\n```")
-                is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)命令语法不正确。详细信息：\n```\n${e.localizedMessage}\n```")
+            if (client.config.responseCommandExceptions) {
+                when (event) {
+                    is DirectMessageEvent -> event.sender.sendMessage("命令语法不正确。详细信息：\n```\n${e.localizedMessage}\n```")
+                    is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)命令语法不正确。详细信息：\n```\n${e.localizedMessage}\n```")
+                }
             }
             e.printStackTrace()
         } catch (e: Exception) {
-            when (event) {
-                is DirectMessageEvent -> event.sender.sendMessage("执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
-                is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
+            if (client.config.responseCommandExceptions) {
+                when (event) {
+                    is DirectMessageEvent -> event.sender.sendMessage("执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
+                    is ChannelMessageEvent -> event.channel.sendMessage("(met)${event.sender.id}(met)执行命令时发生了错误，请联系开发者。详细信息：\n```\n${e}\n```")
+                }
             }
             e.printStackTrace()
         }
@@ -127,36 +170,7 @@ class EventManager(
         }
     }
 
-    fun Filter.parse(input: String): Map<String, Any>? {
-        val list = mutableListOf<Tuple<String?, Regex>>()
-        val ret = mutableMapOf<String, String>()
-        var start = 0
-        while (pattern.indexOf('{', start) != -1) {
-            val index = pattern.indexOf('{', start)
-            if (start != index) {
-                list.add(Tuple(null, Regex.fromLiteral(pattern.substring(start until index))))
-            }
-            start = pattern.indexOf('}', index)
-            val s = pattern.substring(index + 1 until start)
-            start += 1
-            var name = s
-            var regex = Regex("^\\w+")
-            if (s.contains(',')) {
-                name = s.substring(0 until s.indexOf(',', start))
-                regex = Regex(s.substring(s.indexOf(',', start) + 1))
-            }
-            list.add(Tuple(name, regex))
-        }
-        if (start != pattern.length) {
-            list.add(Tuple(null, Regex.fromLiteral(pattern.substring(start until pattern.length))))
-        }
-        // parsing start
-        start = 0
-        for (item in list) {
-        }
-        return ret
-    }
-
+    @OptIn(ExperimentalStdlibApi::class)
     inline fun <reified T : Event> callEvent(event: T) {
         if (event is CardButtonClickEvent) {
             clickEvents.forEach {
@@ -186,18 +200,112 @@ class EventManager(
                         try {
                             if (method.parameterTypes[0] == T::class.java) {
                                 method.invoke(it, event)
-                            } else if (event is MessageEvent) {
-                                val filters = method.annotations.filter { it.annotationClass == Filter::class }
+                            } else if (event is ChannelMessageEvent || event is DirectMessageEvent) {
+                                event as MessageEvent
+                                val kotlinFilters = method.annotations.filter { it.annotationClass == Filter::class }
                                     .map { Filter::class.cast(it) }
-                                for (filter in filters) {
-                                    println(filter.pattern)
-                                    filter.parse(event.content)?.let { args ->
-                                        if (method.parameters.map { it.name }.containsAll(args.keys)) {
-                                            method.parameters.forEach {
+                                for (filter in kotlinFilters) {
+                                    filter.parse(event.content)?.toMutableMap()?.let { parsingResult ->
+                                        val args: MutableMap<KParameter, Any?> = mutableMapOf()
+                                        val func = method.kotlinFunction
+                                        val source = when (event) {
+                                            is ChannelMessageEvent -> CommandSource(
+                                                type = CommandSource.Type.Channel,
+                                                channel = event.channel,
+                                                user = event.sender,
+                                                timestamp = event.timestamp.toLong()
+                                            )
+                                            is DirectMessageEvent -> CommandSource(
+                                                type = CommandSource.Type.Private,
+                                                user = event.sender,
+                                                private = event.sender,
+                                                timestamp = event.timestamp.toLong()
+                                            )
+                                            else -> throw Exception("invalid type")
+                                        }
+                                        parsingResult["source"] = "null*/*"
+                                        if (method.parameters.map { it.name }.contains("arg0")) {
+
+                                        } else if (func != null && parsingResult.keys.containsAll(func.parameters.map { it.name }
+                                                .filterNotNull())) {
+                                            func.parameters.mapIndexed { index, parameter ->
+                                                var name = parameter.name
+                                                if (name == null) {
+                                                    name = method.parameters[index - 1].name
+                                                }
+                                                when (parameter.type.classifier) {
+                                                    String::class -> {
+                                                        args[parameter] = parsingResult[name] as String
+                                                    }
+                                                    CommandSource::class -> {
+                                                        args[parameter] = source
+                                                    }
+                                                    it::class -> {
+                                                        args[parameter] = it
+                                                    }
+                                                    else -> {
+                                                        throw Exception("unsupported type.")
+                                                    }
+                                                }
+                                            }
+                                            try {
+                                                func.callBy(args)
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
                                             }
                                         }
                                     }
                                 }
+                                /*
+                                val javaFilters = method.annotations.filter { it.annotationClass == JavaFilter::class }
+                                    .map { JavaFilter::class.cast(it) }
+                                for (filter in javaFilters) {
+                                    filter.parse(event.content)?.toMutableMap()?.let { parsingResult ->
+                                        val args: MutableMap<KParameter, Any?> = mutableMapOf()
+                                        val func = method.kotlinFunction
+                                        val source = when (event) {
+                                            is ChannelMessageEvent -> CommandSource(
+                                                type = CommandSource.Type.Channel,
+                                                channel = event.channel,
+                                                user = event.sender,
+                                                timestamp = event.timestamp.toLong()
+                                            )
+                                            is DirectMessageEvent -> CommandSource(
+                                                type = CommandSource.Type.Private,
+                                                user = event.sender,
+                                                private = event.sender,
+                                                timestamp = event.timestamp.toLong()
+                                            )
+                                            else -> throw Exception("invalid type")
+                                        }
+                                        parsingResult["source"] = "null"
+                                        if (func != null) {
+                                            func.parameters.map { parameter ->
+                                                when (parameter.type.javaType.typeName ) {
+                                                    String::class.java.typeName -> {
+                                                        args[parameter] = parsingResult[parameter.name] as String
+                                                    }
+                                                    CommandSource::class.java.typeName -> {
+                                                        args[parameter] = source
+                                                    }
+                                                    it::class.java.typeName -> {
+                                                        args[parameter] = it
+                                                    }
+                                                    else -> {
+                                                        throw Exception("unsupported type.")
+                                                    }
+                                                }
+                                            }
+                                            try {
+                                                func.callBy(args)
+                                            }
+                                            catch (e: Exception) {
+                                                e.printStackTrace()
+                                            }
+                                        }
+                                    }
+                                }
+                                */
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()

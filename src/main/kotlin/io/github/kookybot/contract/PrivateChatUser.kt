@@ -26,12 +26,6 @@ class PrivateChatUser(
     @field:DontUpdate
     val code: String,
     id: String,
-    @field:SerializedName("last_read_time")
-    var lastReadTime: Int = 0,
-    @field:SerializedName("latest_msg_time")
-    var latestMessageTime: Int = 0,
-    @field:SerializedName("unread_count")
-    var unreadCount: Int = 0,
     client: Client,
     name: String = "",
     identifyNumber: String = "",
@@ -53,6 +47,19 @@ class PrivateChatUser(
     avatarUrl,
     vipAvatarUrl,
     isVip), Updatable {
+
+    @field:SerializedName("last_read_time")
+    var lastReadTime: Int = 0
+        internal set
+
+    @field:SerializedName("latest_msg_time")
+    var latestMessageTime: Int = 0
+        internal set
+
+    @field:SerializedName("unread_count")
+    var unreadCount: Int = 0
+        internal set
+
     override fun update() {
         val json = with(client) {
             sendRequest(requestBuilder(Client.RequestType.USER_CHAT_VIEW, "chat_code" to code))
@@ -60,6 +67,7 @@ class PrivateChatUser(
         updateByJson(json)
         super<User>.updateByJson(json["target_info"].asJsonObject)
     }
+
     fun sendMessage(message: String, quote: String? = null) {
         val msg = MarkdownMessage(client, message)
         msg.quote = quote

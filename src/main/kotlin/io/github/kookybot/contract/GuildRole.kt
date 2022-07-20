@@ -17,20 +17,32 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 package io.github.kookybot.contract
 
 import io.github.kookybot.utils.Updatable
+ class GuildRole(
+     val id: Int,
+     name: String,
+     color: Int,
+     position: Int,
+     hoist: Int,
+     mentionable: Int,
+     permissions: Int,
+ ) : Updatable {
+     var name: String = name
+         internal set
+     var color: Int = color
+         internal set
+     var position: Int = position
+         internal set
+     var hoist: Int = hoist
+         internal set
+     var mentionable: Int = mentionable
+         internal set
+     var permissions: Int = permissions
+         internal set
 
-data class GuildRole (
-    val id: Int,
-    var name: String,
-    var color: Int,
-    var position: Int,
-    var hoist: Int,
-    var mentionable: Int,
-    var permissions: Int,
-): Updatable {
-    override fun update() {
-        // check guild perm
-        // send request: view
-        // update
-        //TODO
-    }
-}
+     override fun update() {
+         // check guild perm
+         // send request: view
+         // update
+         //TODO
+     }
+ }

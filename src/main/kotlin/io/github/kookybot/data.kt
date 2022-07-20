@@ -19,5 +19,5 @@ package io.github.kookybot
 object data {
     val baseUrl = "https://www.kookapp.cn"
     val baseApiUrl = "https://www.kookapp.cn/api/v3"
-    val version = "0.1"
+    val version = "0.2"
 }
