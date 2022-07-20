@@ -223,22 +223,26 @@ class EventManager(
                                             )
                                             else -> throw Exception("invalid type")
                                         }
-                                        parsingResult["source"] = "null*/*"
-                                        if (method.parameters.map { it.name }.contains("arg0")) {
-
-                                        } else if (func != null && parsingResult.keys.containsAll(func.parameters.map { it.name }
-                                                .filterNotNull())) {
-                                            func.parameters.mapIndexed { index, parameter ->
-                                                var name = parameter.name
-                                                if (name == null) {
-                                                    name = method.parameters[index - 1].name
-                                                }
+                                        parsingResult["source"] = source
+                                        if (func == null) return@let
+                                        if ((method.parameters.isNotEmpty()) && (!func.parameters.map {
+                                                it.name?.matches(
+                                                    Regex("^arg\\d+$")
+                                                )
+                                            }.contains(false))) {
+                                            // java method, ordered.
+                                            method.invoke(it, *parsingResult.values.toTypedArray())
+                                        } else if (parsingResult.keys.containsAll(func.parameters.mapNotNull { it.name })) {
+                                            func.parameters.map { parameter ->
                                                 when (parameter.type.classifier) {
                                                     String::class -> {
-                                                        args[parameter] = parsingResult[name] as String
+                                                        args[parameter] = parsingResult[parameter.name] as String
                                                     }
                                                     CommandSource::class -> {
-                                                        args[parameter] = source
+                                                        if (parameter.name == "source")
+                                                            args[parameter] = source
+                                                        else
+                                                            null
                                                     }
                                                     it::class -> {
                                                         args[parameter] = it
@@ -256,56 +260,6 @@ class EventManager(
                                         }
                                     }
                                 }
-                                /*
-                                val javaFilters = method.annotations.filter { it.annotationClass == JavaFilter::class }
-                                    .map { JavaFilter::class.cast(it) }
-                                for (filter in javaFilters) {
-                                    filter.parse(event.content)?.toMutableMap()?.let { parsingResult ->
-                                        val args: MutableMap<KParameter, Any?> = mutableMapOf()
-                                        val func = method.kotlinFunction
-                                        val source = when (event) {
-                                            is ChannelMessageEvent -> CommandSource(
-                                                type = CommandSource.Type.Channel,
-                                                channel = event.channel,
-                                                user = event.sender,
-                                                timestamp = event.timestamp.toLong()
-                                            )
-                                            is DirectMessageEvent -> CommandSource(
-                                                type = CommandSource.Type.Private,
-                                                user = event.sender,
-                                                private = event.sender,
-                                                timestamp = event.timestamp.toLong()
-                                            )
-                                            else -> throw Exception("invalid type")
-                                        }
-                                        parsingResult["source"] = "null"
-                                        if (func != null) {
-                                            func.parameters.map { parameter ->
-                                                when (parameter.type.javaType.typeName ) {
-                                                    String::class.java.typeName -> {
-                                                        args[parameter] = parsingResult[parameter.name] as String
-                                                    }
-                                                    CommandSource::class.java.typeName -> {
-                                                        args[parameter] = source
-                                                    }
-                                                    it::class.java.typeName -> {
-                                                        args[parameter] = it
-                                                    }
-                                                    else -> {
-                                                        throw Exception("unsupported type.")
-                                                    }
-                                                }
-                                            }
-                                            try {
-                                                func.callBy(args)
-                                            }
-                                            catch (e: Exception) {
-                                                e.printStackTrace()
-                                            }
-                                        }
-                                    }
-                                }
-                                */
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
