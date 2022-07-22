@@ -20,6 +20,7 @@ package io.github.kookybot.client
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.kfc.exceptions.CrazyThursdayMoneyNotEnoughException
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.ParseResults
 import com.mojang.brigadier.arguments.StringArgumentType
@@ -278,6 +279,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         var enablePermission = true
         var botMarketUUID = ""
         var responseCommandExceptions = true
+        var enableEasterEggs = false
         internal var commandPrefix = listOf("/")
         internal var dataFolder = File("data/")
         internal var defaultCommand = false
@@ -308,9 +310,10 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         while (status != State.FatalError &&
             status != State.Closed
         ) {
+            Thread.sleep(30000)
             try {
+                if (status == State.Initialized) continue
                 if (resumeStatus != None) continue
-                Thread.sleep(30000)
                 logger.debug("ping")
                 pingStatus = PingState.Pinging
                 webSocketClient?.send("{\"s\":2,\"sn\":$lastSn}")
@@ -330,6 +333,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
 
     /**
      * 警告：
+     *
      * 强烈不建议使用，请使用封装好的内容
      * 使用不当，后果自负
      */
@@ -837,5 +841,10 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
     init {
         pingThread.start()
         reconnectThread.start()
+        if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.THURSDAY) {
+            if (config.enableEasterEggs) {
+                CrazyThursdayMoneyNotEnoughException().printStackTrace()
+            }
+        }
     }
 }
