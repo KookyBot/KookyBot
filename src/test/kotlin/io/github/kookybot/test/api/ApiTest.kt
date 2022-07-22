@@ -47,15 +47,32 @@ suspend fun main() {
     val self = client.start()
     val logger = LoggerFactory.getLogger("ApiTest")
     self.setListening(singer = "洛天依", name = "十周年快乐！")
+
+    client.eventManager.dispatcher.run {
+        register(LiteralArgumentBuilder.literal<CommandSource?>("")
+            .executes {
+                0
+            }
+            .then(argument("arg name", StringArgumentType.word())).executes {
+                it.source.sendMessage(StringArgumentType.getString(it, "arg name"))
+                0
+            }
+        )
+    }
+
     client.addCommand { dispatcher ->
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("lottery")
-            .then(argument<CommandSource?, String?>("name", StringArgumentType.word())
-                .then(argument<CommandSource?, Int?>("time", IntegerArgumentType.integer(1))
-                    .then(argument<CommandSource?, Int?>("nums", IntegerArgumentType.integer(1))
-                        .executes {
-                            it.run {
-                                if (source.channel == null) {
-                                    return@executes 0
+        dispatcher.register(
+            LiteralArgumentBuilder.literal<CommandSource?>("lottery")
+                .then(
+                    argument<CommandSource?, String?>("name", StringArgumentType.word())
+                        .then(
+                            argument<CommandSource?, Int?>("time", IntegerArgumentType.integer(1))
+                                .then(
+                                    argument<CommandSource?, Int?>("nums", IntegerArgumentType.integer(1))
+                                        .executes {
+                                            it.run {
+                                                if (source.channel == null) {
+                                                    return@executes 0
                                 }
                                 val list: MutableList<String> = mutableListOf()
                                 val num = IntegerArgumentType.getInteger(it, "nums")
@@ -115,6 +132,7 @@ suspend fun main() {
                 )
             )
         )
+
         dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("vote")
             .requires { it.hasPermission("kooky.operator") }
             .then(argument<CommandSource?, String?>("name", StringArgumentType.word())

@@ -24,6 +24,7 @@ import io.github.kookybot.annotation.Filter
 import io.github.kookybot.client.Client
 import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.contract.Guild
+import io.github.kookybot.contract.PrivateChatUser
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.events.channel.*
 import io.github.kookybot.events.direct.DirectCancelReactionEvent
@@ -286,10 +287,10 @@ class EventManager(
                     target = when (event.channelType) {
                         MessageEvent.ChannelType.GROUP -> client.self!!.guilds.map {
                             it.value.lazyChannels[json["target_id"].asString]?.value
-                        }.first { it != null }!!
-                        MessageEvent.ChannelType.PERSON -> client.self!!.chattingUsers[json["target_id"].asString]!!.value
+                        }.first { it != null } as TextChannel
+                        MessageEvent.ChannelType.PERSON -> client.self!!.chattingUsers[json["target_id"].asString]!!.value as PrivateChatUser
                         else -> throw Exception("Invalid channel type.")
-                    } as TextChannel,
+                    },
                     content = json.get("content").asString
                 ), client.self!!))
             }

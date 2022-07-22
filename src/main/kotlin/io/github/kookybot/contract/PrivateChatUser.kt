@@ -18,6 +18,7 @@ package io.github.kookybot.contract
 
 import com.google.gson.annotations.SerializedName
 import io.github.kookybot.client.Client
+import io.github.kookybot.message.CardMessage
 import io.github.kookybot.message.MarkdownMessage
 import io.github.kookybot.utils.DontUpdate
 import io.github.kookybot.utils.Updatable
@@ -72,5 +73,9 @@ class PrivateChatUser(
         val msg = MarkdownMessage(client, message)
         msg.quote = quote
         sendMessage(msg)
+    }
+
+    fun sendCardMessage(content: CardMessage.MessageScope.() -> Unit) {
+        sendMessage(CardMessage(client, content))
     }
 }
