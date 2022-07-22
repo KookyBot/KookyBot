@@ -299,6 +299,9 @@ class EventManager(
         }
         if (event.eventType == MessageEvent.EventType.SYSTEM) {
             val extraJsonObject = event.extra.get("body").asJsonObject
+
+            //deleted_channel有两个type 分别在body和extra下
+            //临时做的修改 暂时不知道怎么去更好地改
             if (extraJsonObject.has("type")) {
                 extraJsonObject.add("extraType", extraJsonObject["type"])
             }
@@ -414,6 +417,7 @@ class EventManager(
                     callEvent(ChannelDeletedEvent(id, channel, client.self!!))
                 }
                 "updated_guild_member" -> {
+                    //targetId is guildId on this event
                     val guild = client.self!!.guilds[event.targetId]!!
                     val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
                     user.update()
