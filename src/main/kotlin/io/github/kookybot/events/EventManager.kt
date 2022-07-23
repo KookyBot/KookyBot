@@ -408,6 +408,7 @@ class EventManager(
                 }
                 "joined_guild" -> {
                     val guild = client.self!!.guilds[event.targetId]!!
+                    guild.update()
                     val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
                     callEvent(GuildUserJoinEvent(client.self!!, guild, user))
                 }
