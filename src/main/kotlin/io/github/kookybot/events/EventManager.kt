@@ -299,12 +299,6 @@ class EventManager(
         }
         if (event.eventType == MessageEvent.EventType.SYSTEM) {
             val extraJsonObject = event.extra.get("body").asJsonObject
-
-            //deleted_channel有两个type 分别在body和extra下
-            //临时做的修改 暂时不知道怎么去更好地改
-            if (extraJsonObject.has("type")) {
-                extraJsonObject.add("extraType", extraJsonObject["type"])
-            }
             extraJsonObject.addProperty("type", event.extra.get("type").asString)
             event.extra = event.extra.get("body").asJsonObject
             when (event.extra.get("type").asString) {
@@ -388,16 +382,7 @@ class EventManager(
                 "added_channel" -> {
                     val guild: Guild = client.self!!.guilds[event.extra["guild_id"].asString]!!
                     guild.update()
-                    val channelId = event.extra["id"].asString
-                    val channelType = event.extra["extraType"].asInt
-                    (guild.lazyChannels as MutableMap)[channelId] = lazy {
-                        when (channelType) {
-                            1 -> TextChannel(client, channelId, guild)
-                            2 -> VoiceChannel(client, channelId, guild)
-                            else -> throw Exception("Invalid channel type.")
-                        }
-                    }
-                    val channel = guild.lazyChannels[channelId]!!.value
+                    val channel = guild.lazyChannels[event.extra["id"].asString]!!.value
                     callEvent(ChannelAddedEvent(channel, client.self!!))
                 }
                 "updated_channel" -> {
