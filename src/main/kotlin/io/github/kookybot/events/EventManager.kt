@@ -298,8 +298,7 @@ class EventManager(
             return
         }
         if (event.eventType == MessageEvent.EventType.SYSTEM) {
-            val extraJsonObject = event.extra.get("body").asJsonObject
-            extraJsonObject.addProperty("type", event.extra.get("type").asString)
+            event.extra.get("body").asJsonObject.addProperty("type", event.extra.get("type").asString)
             event.extra = event.extra.get("body").asJsonObject
             when (event.extra.get("type").asString) {
                 "added_reaction" -> {
@@ -402,7 +401,6 @@ class EventManager(
                     callEvent(ChannelDeletedEvent(id, channel, client.self!!))
                 }
                 "updated_guild_member" -> {
-                    //targetId is guildId on this event
                     val guild = client.self!!.guilds[event.targetId]!!
                     val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
                     user.update()
