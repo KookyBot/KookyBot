@@ -95,21 +95,24 @@ class Guild(
             openId = null
 
         jsonElement.asJsonObject.get("channels").asJsonArray.map { it.asJsonObject }
+            .filter {
+                val id = it.get("id").asString
+                (!lazyChannels.containsKey(id)) && (!categories.containsKey(id))
+            }
             .forEach {
                 val id = it.get("id").asString
                 if (it["is_category"].asBoolean) {
-                    if (categories.containsKey(id)) {
-                        (categories as MutableMap)[id] = Category(client, id, this@Guild).updateAndGet()
-                    }
+                    (categories as MutableMap)[id] = Category(client, id, this@Guild).updateAndGet()
                 } else {
-                    if (lazyChannels.containsKey(id)) return
                     try {
                         (lazyChannels as MutableMap)[id] = lazy {
-                            when (it.get("type").asInt) {
+                            val channel = when (it.get("type").asInt) {
                                 1 -> TextChannel(client, id, this@Guild)
                                 2 -> VoiceChannel(client, id, this@Guild)
                                 else -> throw Exception("Invalid channel type.")
                             }
+                            channel.update()
+                            channel
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
