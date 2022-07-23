@@ -26,6 +26,7 @@ import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.contract.Guild
 import io.github.kookybot.contract.PrivateChatUser
 import io.github.kookybot.contract.TextChannel
+import io.github.kookybot.contract.VoiceChannel
 import io.github.kookybot.events.channel.*
 import io.github.kookybot.events.direct.DirectCancelReactionEvent
 import io.github.kookybot.events.direct.DirectMessageEvent
@@ -391,7 +392,7 @@ class EventManager(
                 }
                 "deleted_channel" -> {
                     val id = event.extra["id"].asString
-                    val guild: Guild = client.self!!.guilds[event.extra["guild_id"].asString]!!
+                    val guild: Guild = client.self!!.guilds[event.targetId]!!
                     val channel = guild.lazyChannels[id].let {
                         if (it?.isInitialized() == true) it.value
                         else null
