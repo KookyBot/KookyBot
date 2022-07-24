@@ -23,10 +23,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException
 import io.github.kookybot.annotation.Filter
 import io.github.kookybot.client.Client
 import io.github.kookybot.commands.CommandSource
-import io.github.kookybot.contract.Guild
-import io.github.kookybot.contract.PrivateChatUser
-import io.github.kookybot.contract.TextChannel
-import io.github.kookybot.contract.VoiceChannel
+import io.github.kookybot.contract.*
 import io.github.kookybot.events.channel.*
 import io.github.kookybot.events.direct.DirectCancelReactionEvent
 import io.github.kookybot.events.direct.DirectMessageEvent
@@ -408,8 +405,13 @@ class EventManager(
                 }
                 "joined_guild" -> {
                     val guild = client.self!!.guilds[event.targetId]!!
-                    guild.update()
-                    val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
+                    val userId = event.extra.get("user_id").asString
+                    guild.lazyUsers[userId] = lazy {
+                        val user = GuildUser(client, userId, guild)
+                        user.update()
+                        return@lazy user
+                    }
+                    val user = guild.getGuildUser(userId)!!
                     callEvent(GuildUserJoinEvent(client.self!!, guild, user))
                 }
                 "exited_guild" -> {
