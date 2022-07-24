@@ -454,7 +454,7 @@ class EventManager(
             channelMessageEvent.guild = guild!!
             val channel = guild.lazyChannels[json["target_id"].asString]!!.value
             channelMessageEvent.channel = channel as TextChannel
-            val user = client.self!!.getGuildUser(json["author_id"].asString, guild.id)!!
+            val user = client.self!!.getGuildUser(json["author_id"].asString, guild.id) ?: return
             channelMessageEvent.sender = user
             callEvent(channelMessageEvent)
         } else if (event.channelType == MessageEvent.ChannelType.PERSON) {
