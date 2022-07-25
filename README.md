@@ -55,6 +55,7 @@ JVM 平台上的 KOOK (原开黑啦) Bot SDK
 优秀的衍生项目可以得到展示的机会！欢迎把你的项目提交给我们！
 
 - [KookyGithub](https://github.com/zly2006/KookyGithub) - 将GithubWebhook的信息同步到Kook
+- [CubikTech/KookyBotChatBotTemplate](https://github.com/CubikTech/KookyBotChatBotTemplate) - 一个**非官方**的，基于 Kotlin 和 KookyBot 的聊天机器人的开发模板
 
 ## 联系我
 

@@ -55,6 +55,7 @@ We look forward to your contributions to this project! You can help us improve o
 Excellent derived projects can get a chance to be showcased! You can submit your project to us!
 
 - [KookyGithub](https://github.com/zly2006/KookyGithub) - Sync GitHub webhook messages to KOOK
+- [CubikTech/KookyBotChatBotTemplate](https://github.com/CubikTech/KookyBotChatBotTemplate) - A **NON-OFFICIAL** template project for building a chatbot based on KookyBot with Kotlin.
 
 ## Contract me
 
