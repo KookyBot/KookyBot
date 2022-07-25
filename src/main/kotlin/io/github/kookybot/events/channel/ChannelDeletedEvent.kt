@@ -30,5 +30,6 @@ class ChannelDeletedEvent(
      * 对于任何频道，您都可以使用[Channel.update]缓存之
      */
     val channel: Channel?,
+    val channelId: String,
     override val self: Self,
 ) : Event

@@ -381,6 +381,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         ADD_REACTION,
         CANCEL_REACTION,
         ACTIVITY,
+        CHANNEL_ROLE_INDEX,
     }
 
     private fun apiOf(path: String): URI {
@@ -489,6 +490,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
             ACTIVITY -> builder.uri(apiOf("/game/activity"))
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
+            CHANNEL_ROLE_INDEX -> builder.uri(apiOf("/channel-role/index?channel_id=${values!!["channel_id"]}")).GET()
         }
         return builder.build()
     }

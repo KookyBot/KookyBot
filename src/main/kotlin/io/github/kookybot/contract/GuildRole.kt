@@ -34,15 +34,15 @@ import io.github.kookybot.utils.Updatable
          internal set
      var hoist: Int = hoist
          internal set
-     var mentionable: Int = mentionable
+     var mentionable: Boolean = false
          internal set
      var permissions: Int = permissions
          internal set
 
+     /**
+      * Don't use this method.
+      */
      override fun update() {
-         // check guild perm
-         // send request: view
-         // update
-         //TODO
+         TODO()
      }
  }

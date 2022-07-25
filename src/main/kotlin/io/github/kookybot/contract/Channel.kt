@@ -36,50 +36,35 @@ abstract class Channel(
     val id: String,
     @field:Transient
     val guild: Guild,
-): Updatable {
+) : PermissionOverwritten(), Updatable {
     var name: String = ""
         internal set
+
     @field:Transient
     var parent: Category? = null
         internal set
     var topic: String = ""
         internal set
+
     @field:SerializedName("permission_sync")
     var permissionSync: Int = 0
         internal set
     var level: Int = 0
-        internal set
-    @field:SerializedName("slow_mode")
-    var slowMode: Int = 0
-        internal set
-    @field:DontUpdate
-    var permissionOverwrites: List<RolePermissionOverwrite> = listOf()
-        internal set
-    @field:DontUpdate
-    var permissionUsers: List<UserPermissionOverwrite> = listOf()
         internal set
 
     @field:DontUpdate
     var type: ChannelType = ChannelType.UNKNOWN
         internal set
 
-    data class RolePermissionOverwrite(
-        val role: GuildRole,
-        var value: Boolean
-    )
-
-    data class UserPermissionOverwrite(
-        val role: User,
-        var value: Boolean
-    )
-
     override fun updateByJson(jsonElement: JsonElement) {
-        super.updateByJson(jsonElement)
-        type = when(jsonElement.asJsonObject.get("type").asInt) {
+        super<Updatable>.updateByJson(jsonElement)
+        type = when (jsonElement.asJsonObject.get("type").asInt) {
             1 -> ChannelType.TEXT
             2 -> ChannelType.VOICE
             else -> ChannelType.UNKNOWN
         }
+        val perm = client.sendRequest(client.requestBuilder(Client.RequestType.CHANNEL_ROLE_INDEX, "channel_id" to id))
+        updateByJson(perm, guild)
     }
 
     override fun update() {

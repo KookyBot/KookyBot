@@ -24,6 +24,10 @@ import io.github.kookybot.events.Event
 class GuildUserExitEvent(
     override val self: Self,
     val guild: Guild,
-    val user: GuildUser
-) : Event {
-}
+    /**
+     * the exited user.
+     * if the value is not cached, this field is `null`
+     */
+    val user: GuildUser?,
+    val userId: String,
+) : Event

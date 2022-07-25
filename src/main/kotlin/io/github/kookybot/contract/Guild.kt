@@ -83,77 +83,75 @@ class Guild(
         internal set
     var lazyChannels: Map<String, Lazy<Channel>> = mutableMapOf()
         internal set
+
     @field:DontUpdate
-    var roleMap: Map<Int, GuildRole> = mapOf()
+    var roleMap: Map<Int, GuildRole> = mutableMapOf()
         internal set
     val owner: User get() = client.getUser(masterId)
     val botPermission: Permission = PermissionImpl.Permissions.None
 
     override fun updateByJson(jsonElement: JsonElement) {
         super.updateByJson(jsonElement)
-        if (!jsonElement.asJsonObject.get("enable_open").asBoolean)
+        val json = jsonElement.asJsonObject
+        if (!json["enable_open"].asBoolean && json["enable_opem"].asInt != 1)
             openId = null
 
-        jsonElement.asJsonObject.get("channels").asJsonArray.map { it.asJsonObject }
-            .filter {
-                val id = it.get("id").asString
-                (!lazyChannels.containsKey(id)) && (!categories.containsKey(id))
-            }
-            .forEach {
-                val id = it.get("id").asString
-                if (it["is_category"].asBoolean) {
-                    (categories as MutableMap)[id] = Category(client, id, this@Guild).updateAndGet()
-                } else {
-                    try {
-                        (lazyChannels as MutableMap)[id] = lazy {
-                            val channel = when (it.get("type").asInt) {
-                                1 -> TextChannel(client, id, this@Guild)
-                                2 -> VoiceChannel(client, id, this@Guild)
-                                else -> throw Exception("Invalid channel type.")
+        if (json.has("channels")) {
+            json["channels"].asJsonArray.map { it.asJsonObject }
+                .filter {
+                    val id = it["id"].asString
+                    (!lazyChannels.containsKey(id)) && (!categories.containsKey(id))
+                }
+                .forEach {
+                    val id = it["id"].asString
+                    if (it["is_category"].asBoolean) {
+                        (categories as MutableMap)[id] = Category(client, id, this@Guild).updateAndGet()
+                    } else {
+                        try {
+                            (lazyChannels as MutableMap)[id] = lazy {
+                                val channel = when (it["type"].asInt) {
+                                    1 -> TextChannel(client, id, this@Guild)
+                                    2 -> VoiceChannel(client, id, this@Guild)
+                                    else -> throw Exception("Invalid channel type.")
+                                }
+                                channel.update()
+                                channel
                             }
-                            channel.update()
-                            channel
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
                     }
                 }
-            }
+        }
 
         defaultChannel =
-            lazyChannels[jsonElement.asJsonObject.get("default_channel_id").asString]?.value as TextChannel?
+            lazyChannels[json.get("default_channel_id").asString]?.value as TextChannel?
         welcomeChannel =
-            lazyChannels[jsonElement.asJsonObject.get("welcome_channel_id").asString]?.value as TextChannel?
+            lazyChannels[json.get("welcome_channel_id").asString]?.value as TextChannel?
+
+        if (json.has("roles")) {
+            roleMap = mutableMapOf()
+            json["roles"].asJsonArray.forEach {
+                val role = Gson().fromJson(it, GuildRole::class.java)
+                roleMap = roleMap + (role.id to role)
+            }
+        }
     }
 
     override fun update() {
         with(client) {
-            val g = client.sendRequest(requestBuilder(Client.RequestType.GUILD_VIEW,
-                mapOf("guild_id" to id)))
+            val g = client.sendRequest(
+                requestBuilder(
+                    Client.RequestType.GUILD_VIEW,
+                    mapOf("guild_id" to id)
+                )
+            )
 
             updateByJson(g)
 
-            if (true) {
-                roleMap = mutableMapOf()
-                g.get("roles").asJsonArray.forEach {
-                    val role = Gson().fromJson(it, GuildRole::class.java)
-                    roleMap = roleMap + (role.id to role)
-                }
-            } else {
-                // always false
-                try {
-                    with(client) {
-                        val list = sendRequest(requestBuilder(Client.RequestType.LIST_GUILD_ROLE,
-                            mapOf("guild_id" to id))).get("items").asJsonArray
-                        roleMap = mutableMapOf()
-                        list.forEach {
-                            val role = Gson().fromJson(it, GuildRole::class.java)
-                            roleMap = roleMap + (role.id to role)
-                        }
-                    }
-                } catch (e: Exception) {
-                    // TODO: 判定权限，等以后吧
-                }
+            g.get("roles").asJsonArray.forEach {
+                val role = Gson().fromJson(it, GuildRole::class.java)
+                roleMap = roleMap + (role.id to role)
             }
         }
     }
