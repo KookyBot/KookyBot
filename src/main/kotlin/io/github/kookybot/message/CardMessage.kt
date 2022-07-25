@@ -202,22 +202,24 @@ class CardMessage(client: Client, contentBuilder: MessageScope.() -> Unit) : Mes
         }
         fun SectionModule(
             text: CardComponent,
-            accessory: CardComponent,
-            mode: LeftRight = LeftRight.Right
+            accessory: CardComponent? = null,
+            mode: LeftRight = LeftRight.Right,
         ) {
-
             val obj = object : CardComponent() {
                 override fun toJson(): JsonElement {
                     val obj = JsonObject()
                     obj.addProperty("type", "section")
                     obj.add("text", text.toJson())
-                    obj.add("accessory", accessory.toJson())
-                    obj.addProperty("mode", (
-                            if (accessory.toJson().asJsonObject.get("type").asString == "button")
-                                LeftRight.Right
-                            else
-                                mode
-                            ).name.lowercase())
+                    if (accessory != null)
+                        obj.add("accessory", accessory.toJson())
+                    obj.addProperty(
+                        "mode", (
+                                if (accessory?.toJson()?.asJsonObject?.get("type")?.asString == "button")
+                                    LeftRight.Right
+                                else
+                                    mode
+                                ).name.lowercase()
+                    )
                     return obj
                 }
             }
