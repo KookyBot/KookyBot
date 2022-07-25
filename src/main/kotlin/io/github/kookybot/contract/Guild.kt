@@ -90,10 +90,29 @@ class Guild(
     val owner: User get() = client.getUser(masterId)
     val botPermission: Permission = PermissionImpl.Permissions.None
 
+    fun initRoleMap() {
+        //TODO
+        roleMap = mutableMapOf(
+            0 to GuildRole(
+                id = 0,
+                name = "@全体成员",
+                color = 0,
+                position = -1,
+                hoist = -1,
+                mentionable = 1,
+                permissions = 0,
+            )
+        )
+    }
+
+    init {
+        initRoleMap()
+    }
+
     override fun updateByJson(jsonElement: JsonElement) {
         super.updateByJson(jsonElement)
         val json = jsonElement.asJsonObject
-        if (!json["enable_open"].asBoolean && json["enable_opem"].asInt != 1)
+        if (!json["enable_open"].asBoolean)
             openId = null
 
         if (json.has("channels")) {
@@ -130,7 +149,7 @@ class Guild(
             lazyChannels[json.get("welcome_channel_id").asString]?.value as TextChannel?
 
         if (json.has("roles")) {
-            roleMap = mutableMapOf()
+            initRoleMap()
             json["roles"].asJsonArray.forEach {
                 val role = Gson().fromJson(it, GuildRole::class.java)
                 roleMap = roleMap + (role.id to role)
@@ -148,11 +167,6 @@ class Guild(
             )
 
             updateByJson(g)
-
-            g.get("roles").asJsonArray.forEach {
-                val role = Gson().fromJson(it, GuildRole::class.java)
-                roleMap = roleMap + (role.id to role)
-            }
         }
     }
     fun createTextChannel(name: String, category: Category? = null): TextChannel{

@@ -20,7 +20,7 @@ open class PermissionOverwritten protected constructor(
                 this
             }
         }
-        userPermissionOverwrites = perm["permission_overwrites"].asJsonArray.map { it.asJsonObject }.map {
+        userPermissionOverwrites = perm["permission_users"].asJsonArray.map { it.asJsonObject }.map {
             UserPermissionOverwrite(guild.getGuildUser(it["user"].asJsonObject["id"].asString)!!).run {
                 deny = PermissionImpl(it["deny"].asLong)
                 allow = PermissionImpl(it["allow"].asLong)
