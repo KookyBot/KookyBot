@@ -21,13 +21,13 @@ import com.google.gson.JsonObject
 import io.github.kookybot.client.Client
 import io.github.kookybot.utils.Updatable
 
-class Category (
+class Category(
     @field:Transient
     val client: Client,
     val id: String,
     @field:Transient
     val guild: Guild,
-): Updatable {
+) : PermissionOverwritten(), Updatable {
     var name: String = ""
         internal set
 
@@ -36,14 +36,12 @@ class Category (
     override fun update() {
         with(client) {
             val channel = Gson().fromJson(
-                sendRequest(
-                    requestBuilder(
-                        Client.RequestType.VIEW_CHANNEL,
-                        mapOf("channel_id" to id)
-                    )
-                ), JsonObject::class.java
+                sendRequest(requestBuilder(Client.RequestType.VIEW_CHANNEL, mapOf("channel_id" to id))),
+                JsonObject::class.java
             )
             updateByJson(channel)
+            val perm = sendRequest(requestBuilder(Client.RequestType.CHANNEL_ROLE_INDEX, "channel_id" to id))
+            updateByJson(perm, guild)
         }
     }
 

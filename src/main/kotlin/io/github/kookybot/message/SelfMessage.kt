@@ -50,12 +50,20 @@ class SelfMessage(
     fun delete() {
         when (target) {
             is TextChannel -> {
-                client.sendRequest(client.requestBuilder(Client.RequestType.EDIT_CHANNEL_MESSAGE,
-                    "msg_id" to id))
+                client.sendRequest(
+                    client.requestBuilder(
+                        Client.RequestType.DELETE_CHANNEL_MESSAGE,
+                        "msg_id" to id
+                    )
+                )
             }
             is User -> {
-                client.sendRequest(client.requestBuilder(Client.RequestType.EDIT_PRIVATE_MESSAGE,
-                    "msg_id" to id))
+                client.sendRequest(
+                    client.requestBuilder(
+                        Client.RequestType.DELETE_PRIVATE_MESSAGE,
+                        "msg_id" to id
+                    )
+                )
             }
         }
     }

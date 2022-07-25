@@ -24,9 +24,9 @@ import io.github.kookybot.annotation.Filter
 import io.github.kookybot.client.Client
 import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.contract.Guild
+import io.github.kookybot.contract.GuildUser
 import io.github.kookybot.contract.PrivateChatUser
 import io.github.kookybot.contract.TextChannel
-import io.github.kookybot.contract.VoiceChannel
 import io.github.kookybot.events.channel.*
 import io.github.kookybot.events.direct.DirectCancelReactionEvent
 import io.github.kookybot.events.direct.DirectMessageEvent
@@ -39,6 +39,7 @@ import io.github.kookybot.message.SelfMessage
 import io.github.kookybot.utils.Emoji
 import kotlinx.coroutines.DelicateCoroutinesApi
 import org.apache.directory.api.ldap.model.cursor.Tuple
+import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
@@ -103,6 +104,8 @@ class SingleEventHandler<T>(
 class EventManager(
     private val client: Client,
 ) {
+    val logger = LoggerFactory.getLogger(this::class.java)
+
     val dispatcher = CommandDispatcher<CommandSource>()
     val listeners: MutableMap<KClass<out Event>, MutableList<SingleEventHandler<*>>> = mutableMapOf()
     val classListeners: MutableList<Listener1> = mutableListOf()
@@ -158,9 +161,7 @@ class EventManager(
         }
     }
 
-    /**
-     * 不inline
-     */
+    // 不inline
     fun checkAndParseCommand(event: MessageEvent) {
         if (with(client) {
                 (config.enableCommand)
@@ -172,7 +173,6 @@ class EventManager(
         }
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     inline fun <reified T : Event> callEvent(event: T) {
         if (event is CardButtonClickEvent) {
             clickEvents.forEach {
@@ -398,7 +398,7 @@ class EventManager(
                         else null
                     }
                     (guild.lazyChannels as MutableMap).remove(id)
-                    callEvent(ChannelDeletedEvent(id, channel, client.self!!))
+                    callEvent(ChannelDeletedEvent(id, channel, id, client.self!!))
                 }
                 "updated_guild_member" -> {
                     val guild = client.self!!.guilds[event.targetId]!!
@@ -408,13 +408,22 @@ class EventManager(
                 }
                 "joined_guild" -> {
                     val guild = client.self!!.guilds[event.targetId]!!
-                    val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
+                    val userId = event.extra.get("user_id").asString
+                    guild.lazyUsers[userId] = lazy {
+                        val user = GuildUser(client, userId, guild)
+                        user.update()
+                        return@lazy user
+                    }
+                    val user = guild.getGuildUser(userId)!!
                     callEvent(GuildUserJoinEvent(client.self!!, guild, user))
                 }
                 "exited_guild" -> {
                     val guild = client.self!!.guilds[event.targetId]!!
-                    val user = client.self!!.getGuildUser(event.extra.get("user_id").asString, guild.id)!!
-                    callEvent(GuildUserExitEvent(client.self!!, guild, user))
+                    val user = guild.lazyUsers[event.extra["user_id"]?.asString]?.run {
+                        if (isInitialized()) value
+                        else null
+                    }
+                    callEvent(GuildUserExitEvent(client.self!!, guild, user, event.extra["user_id"].asString))
                 }
                 "self_joined_guild" -> {
                     val guild = Guild(client, event.extra["guild_id"].asString)
@@ -453,7 +462,7 @@ class EventManager(
             channelMessageEvent.guild = guild!!
             val channel = guild.lazyChannels[json["target_id"].asString]!!.value
             channelMessageEvent.channel = channel as TextChannel
-            val user = client.self!!.getGuildUser(json["author_id"].asString, guild.id)!!
+            val user = client.self!!.getGuildUser(json["author_id"].asString, guild.id) ?: return
             channelMessageEvent.sender = user
             callEvent(channelMessageEvent)
         } else if (event.channelType == MessageEvent.ChannelType.PERSON) {

@@ -16,9 +16,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.kookybot.annotation
 
-/**
- * 只能用于kotlin方法
- */
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class Filter(

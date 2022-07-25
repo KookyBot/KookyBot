@@ -1,5 +1,6 @@
 package io.github.kookybot.contract
 
+import com.google.gson.annotations.SerializedName
 import io.github.kookybot.client.Client
 import io.github.kookybot.message.CardMessage
 import io.github.kookybot.message.MarkdownMessage
@@ -7,6 +8,10 @@ import io.github.kookybot.message.Message
 import io.github.kookybot.message.SelfMessage
 
 class TextChannel(client: Client, id: String, guild: Guild) : Channel(client, id, guild), MessageReceiver {
+    @field:SerializedName("slow_mode")
+    var slowMode: Int = 0
+        internal set
+
     override fun sendMessage(message: Message): SelfMessage {
         var type = 9
         when (message) {

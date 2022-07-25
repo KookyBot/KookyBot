@@ -2,7 +2,7 @@ package io.github.kookybot.test.api
 
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
-import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import io.github.kookybot.annotation.Filter
 import io.github.kookybot.client.Client
@@ -49,20 +49,21 @@ suspend fun main() {
     self.setListening(singer = "洛天依", name = "十周年快乐！")
 
     client.eventManager.dispatcher.run {
-        register(LiteralArgumentBuilder.literal<CommandSource?>("")
-            .executes {
-                0
-            }
-            .then(argument("arg name", StringArgumentType.word())).executes {
-                it.source.sendMessage(StringArgumentType.getString(it, "arg name"))
-                0
-            }
+        register(literal<CommandSource?>("test")
+            .then(literal<CommandSource?>("add_channel")
+                .executes {
+                    if (it.source.type == CommandSource.Type.Channel) {
+                        it.source.channel!!.guild.createTextChannel("new-channel")
+                    }
+                    0
+                }
+            )
         )
     }
 
     client.addCommand { dispatcher ->
         dispatcher.register(
-            LiteralArgumentBuilder.literal<CommandSource?>("lottery")
+            literal<CommandSource?>("lottery")
                 .then(
                     argument<CommandSource?, String?>("name", StringArgumentType.word())
                         .then(
@@ -125,25 +126,28 @@ suspend fun main() {
                                                 }
                                     )
                                 }.start()
-                            }
-                            0
-                        }
-                    )
+                                            }
+                                            0
+                                        }
+                                )
+                        )
                 )
-            )
         )
 
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("vote")
-            .requires { it.hasPermission("kooky.operator") }
-            .then(argument<CommandSource?, String?>("name", StringArgumentType.word())
-                .then(argument<CommandSource?, MutableList<String>?>("option",
-                    StringListArgumentType.stringList())
-                    .executes {
-                        val name = StringArgumentType.getString(it, "name")
-                        val args = StringListArgumentType.getStringList(it, "option")
+        dispatcher.register(
+            literal<CommandSource?>("vote")
+                .requires { it.hasPermission("kooky.operator") }
+                .then(argument<CommandSource?, String?>("name", StringArgumentType.word())
+                    .then(argument<CommandSource?, MutableList<String>?>(
+                        "option",
+                        StringListArgumentType.stringList()
+                    )
+                        .executes {
+                            val name = StringArgumentType.getString(it, "name")
+                            val args = StringListArgumentType.getStringList(it, "option")
 
-                        val list: List<MutableList<String>> = (0 until args.size).map { mutableListOf() }
-                        var selfMessage: SelfMessage? = null
+                            val list: List<MutableList<String>> = (0 until args.size).map { mutableListOf() }
+                            var selfMessage: SelfMessage? = null
                         fun CardMessage.MessageScope.card() {
                             Card {
                                 HeaderModule(PlainTextElement(name))
@@ -175,26 +179,27 @@ suspend fun main() {
                             }
                         }
 
-                        val card = CardMessage(client) {
-                            card()
-                        }
-                        selfMessage = it.source.channel!!.sendMessage(card)
+                            val card = CardMessage(client) {
+                                card()
+                            }
+                            selfMessage = it.source.channel!!.sendMessage(card)
 
-                        0
-                    }
+                            0
+                        }
+                    )
                 )
-            )
         )
-        dispatcher.register(LiteralArgumentBuilder.literal<CommandSource?>("kooky")
-            .executes {
-                it.source.channel?.let {
-                    ImageMessage(
-                        client = client,
-                        file = File("data/kooky.png")
-                    ).send(it)
+        dispatcher.register(
+            literal<CommandSource?>("kooky")
+                .executes {
+                    it.source.channel?.let {
+                        ImageMessage(
+                            client = client,
+                            file = File("data/kooky.png")
+                        ).send(it)
+                    }
+                    0
                 }
-                0
-            }
         )
     }
     while (true) {
