@@ -80,8 +80,8 @@ class Self(
     }
 
     fun getChannel(id: String): Channel? {
-        return guilds.values.map { guild -> guild.lazyChannels.entries.firstOrNull { it.key == id } }
-            .firstOrNull()?.value?.value
+        return guilds.values.map { guild -> guild.lazyChannels.entries.firstOrNull { it.key == id }?.value?.value }
+            .filterNotNull().firstOrNull()
     }
 
     fun getGuildUser(id: String, guild: String): GuildUser? {
