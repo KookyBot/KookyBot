@@ -83,7 +83,7 @@ enum class ResumeStatus {
 }
 
 class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = null) {
-    private val logger = LoggerFactory.getLogger(Client::class.java)
+    internal val logger = LoggerFactory.getLogger(Client::class.java)
     private val context: CoroutineContext = EmptyCoroutineContext
     private var lastSn = 0
     private var sessionId = ""

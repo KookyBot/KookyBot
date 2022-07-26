@@ -157,10 +157,18 @@ class Guild(
                 }
         }
 
-        defaultChannel =
-            lazyChannels[json.get("default_channel_id").asString]?.value as TextChannel?
-        welcomeChannel =
-            lazyChannels[json.get("welcome_channel_id").asString]?.value as TextChannel?
+        try {
+            defaultChannel =
+                lazyChannels[json.get("default_channel_id").asString]?.value as TextChannel?
+        } catch (e: Exception) {
+            client.logger.error("无法初始化默认频道。", e)
+        }
+        try {
+            welcomeChannel =
+                lazyChannels[json.get("welcome_channel_id").asString]?.value as TextChannel?
+        } catch (e: Exception) {
+            client.logger.error("无法初始化欢迎频道。", e)
+        }
 
     }
 
