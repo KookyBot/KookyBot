@@ -22,6 +22,7 @@ import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
 import io.github.kookybot.client.Client
 import io.github.kookybot.utils.DontUpdate
+import io.github.kookybot.utils.PermissionImpl
 import io.github.kookybot.utils.Updatable
 
 enum class ChannelType {
@@ -63,15 +64,28 @@ abstract class Channel(
             2 -> ChannelType.VOICE
             else -> ChannelType.UNKNOWN
         }
-        val perm = client.sendRequest(client.requestBuilder(Client.RequestType.CHANNEL_ROLE_INDEX, "channel_id" to id))
-        updateByJson(perm, guild)
+        if (PermissionImpl(guild.botPermission.num).get(PermissionImpl.Permissions.ManageGuildRole.num)) {
+            val perm =
+                client.sendRequest(client.requestBuilder(Client.RequestType.CHANNEL_ROLE_INDEX, "channel_id" to id))
+            updateByJson(perm, guild)
+        }
     }
 
     override fun update() {
         with(client) {
-            val channel = Gson().fromJson(sendRequest(requestBuilder(Client.RequestType.VIEW_CHANNEL,
-                mapOf("channel_id" to id))), JsonObject::class.java)
+            val channel = Gson().fromJson(
+                sendRequest(
+                    requestBuilder(
+                        Client.RequestType.VIEW_CHANNEL,
+                        mapOf("channel_id" to id)
+                    )
+                ), JsonObject::class.java
+            )
             updateByJson(channel)
+            if (PermissionImpl(guild.botPermission.num).get(PermissionImpl.Permissions.ManageGuildRole.num)) {
+                val perm = sendRequest(requestBuilder(Client.RequestType.CHANNEL_ROLE_INDEX, "channel_id" to id))
+                updateByJson(perm, guild)
+            }
         }
     }
 }

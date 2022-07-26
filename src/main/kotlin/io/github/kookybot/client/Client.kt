@@ -97,6 +97,9 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
     internal val config = ConfigureScope(this)
     var currentVoiceChannel: VoiceChannel? = null
 
+    // for init
+    internal var selfId = ""
+
     // configure client
     init {
         configure?.let {

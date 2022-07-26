@@ -88,7 +88,9 @@ class Guild(
     var roleMap: Map<Int, GuildRole> = mutableMapOf()
         internal set
     val owner: User get() = client.getUser(masterId)
-    val botPermission: Permission = PermissionImpl.Permissions.None
+    val self get() = lazyUsers[client.selfId]!!.value
+    var botPermission: Permission = PermissionImpl.Permissions.None
+        internal set
 
     fun initRoleMap() {
         //TODO
@@ -114,6 +116,18 @@ class Guild(
         val json = jsonElement.asJsonObject
         if (!json["enable_open"].asBoolean)
             openId = null
+
+        if (json.has("roles")) {
+            initRoleMap()
+            json["roles"].asJsonArray.forEach {
+                val role = Gson().fromJson(it, GuildRole::class.java)
+                roleMap = roleMap + (role.id to role)
+            }
+            var perm = 0
+            this@Guild.self.update()
+            this@Guild.self.roles.map { it.permissions }.forEach { perm = it.or(perm) }
+            botPermission = PermissionImpl(perm.toLong())
+        }
 
         if (json.has("channels")) {
             json["channels"].asJsonArray.map { it.asJsonObject }
@@ -148,13 +162,6 @@ class Guild(
         welcomeChannel =
             lazyChannels[json.get("welcome_channel_id").asString]?.value as TextChannel?
 
-        if (json.has("roles")) {
-            initRoleMap()
-            json["roles"].asJsonArray.forEach {
-                val role = Gson().fromJson(it, GuildRole::class.java)
-                roleMap = roleMap + (role.id to role)
-            }
-        }
     }
 
     override fun update() {

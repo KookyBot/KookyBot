@@ -19,6 +19,7 @@ package io.github.kookybot.contract
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.github.kookybot.client.Client
+import io.github.kookybot.utils.PermissionImpl
 import io.github.kookybot.utils.Updatable
 
 class Category(
@@ -40,8 +41,10 @@ class Category(
                 JsonObject::class.java
             )
             updateByJson(channel)
-            val perm = sendRequest(requestBuilder(Client.RequestType.CHANNEL_ROLE_INDEX, "channel_id" to id))
-            updateByJson(perm, guild)
+            if (PermissionImpl(guild.botPermission.num).get(PermissionImpl.Permissions.ManageGuildRole.num)) {
+                val perm = sendRequest(requestBuilder(Client.RequestType.CHANNEL_ROLE_INDEX, "channel_id" to id))
+                updateByJson(perm, guild)
+            }
         }
     }
 

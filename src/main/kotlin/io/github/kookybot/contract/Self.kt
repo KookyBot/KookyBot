@@ -24,6 +24,20 @@ class Self(
 ) {
     val logger = LoggerFactory.getLogger(this::class.java)
     val id: String
+    val name: String
+    val identifyNumber: String
+    val fullName: String get() = "$name#$id"
+
+    init {
+        val json = client.sendRequest(client.requestBuilder(Client.RequestType.USER_ME))
+            .asJsonObject
+        id = json.get("id").asString
+        client.selfId = id
+        name = json.get("username").asString
+        identifyNumber = json["identify_num"].asString
+        logger.info("Bot logged in as $fullName, uid $id.")
+    }
+
     val guilds: Map<String, Guild> =
         with(client) {
             sendRequest(requestBuilder(Client.RequestType.GUILD_LIST))
@@ -101,12 +115,5 @@ class Self(
                 "music_name" to name,
             ))
         }
-    }
-
-    init {
-        val json = client.sendRequest(client.requestBuilder(Client.RequestType.USER_ME))
-            .asJsonObject
-        id = json.get("id").asString
-        logger.info("${json.get("username").asString}#${json.get("identify_num").asString} $id")
     }
 }
