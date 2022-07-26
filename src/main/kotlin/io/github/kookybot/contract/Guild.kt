@@ -138,7 +138,11 @@ class Guild(
                 .forEach {
                     val id = it["id"].asString
                     if (it["is_category"].asBoolean) {
-                        (categories as MutableMap)[id] = Category(client, id, this@Guild).updateAndGet()
+                        try {
+                            (categories as MutableMap)[id] = Category(client, id, this@Guild).updateAndGet()
+                        } catch (e: Exception) {
+                            client.logger.error("无法缓存频道分组。", e)
+                        }
                     } else {
                         try {
                             (lazyChannels as MutableMap)[id] = lazy {

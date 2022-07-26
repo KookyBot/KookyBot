@@ -31,9 +31,15 @@ public class MyListener : Listener {
     }
 
     @EventHandler
-    @Filter(".echo {content,\\S+}", CommandSource.Type._All, "kooky.operator")
+    @Filter(".echo {content,\\S+}")
     fun test(content: String, source: CommandSource) {
         source.sendMessage(content)
+    }
+
+    @EventHandler
+    @Filter(".test")
+    fun test(source: CommandSource) {
+        source.sendMessage("test")
     }
 }
 

@@ -59,6 +59,7 @@ abstract class Channel(
 
     override fun updateByJson(jsonElement: JsonElement) {
         super<Updatable>.updateByJson(jsonElement)
+        parent = guild.categories[jsonElement.asJsonObject["parent_id"].asString]
         type = when (jsonElement.asJsonObject.get("type").asInt) {
             1 -> ChannelType.TEXT
             2 -> ChannelType.VOICE
