@@ -23,4 +23,5 @@ import io.github.kookybot.commands.CommandSource
 annotation class Filter(
     val pattern: String,
     val requiredExecutor: CommandSource.Type = CommandSource.Type._All,
+    val requiredPermission: String = "#none",
 )

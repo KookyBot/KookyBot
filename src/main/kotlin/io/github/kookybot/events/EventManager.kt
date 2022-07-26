@@ -147,6 +147,7 @@ class EventManager(
                                 .map { Filter::class.cast(it) }
                             for (filter in kotlinFilters) {
                                 if (filter.requiredExecutor.v and source.type.v == 0) return
+                                if (!source.hasPermission(filter.requiredPermission)) return
                                 filter.parse(event.content)?.toMutableMap()?.let { parsingResult ->
                                     val args: MutableMap<KParameter, Any?> = mutableMapOf()
                                     val func = method.kotlinFunction

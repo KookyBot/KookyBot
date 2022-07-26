@@ -101,6 +101,7 @@ class PermissionManager(
 
     fun hasPermission(perm: String, user: String, guildId: String? = null, channelId: String? = null): Boolean {
         if (!client.config.enablePermission) return false
+        if (perm == "#none") return true
         fun check(perm: String): Boolean? {
             with(channel[user]?.get(channelId)?.get(perm)) {
                 if (this != null) return this
