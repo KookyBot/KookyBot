@@ -34,7 +34,7 @@ import io.github.kookybot.utils.Updatable
          internal set
      var hoist: Int = hoist
          internal set
-     var mentionable: Int = 0
+     var mentionable: Int = mentionable
          internal set
      var permissions: Int = permissions
          internal set

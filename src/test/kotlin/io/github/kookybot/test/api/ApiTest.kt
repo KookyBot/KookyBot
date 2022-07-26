@@ -31,7 +31,7 @@ public class MyListener : Listener {
     }
 
     @EventHandler
-    @Filter(".echo {content,\\d+}")
+    @Filter(".echo {content,\\S+}", CommandSource.Type.Private)
     fun test(content: String, source: CommandSource) {
         source.sendMessage(content)
     }
@@ -42,6 +42,7 @@ suspend fun main() {
     val token = File("data/token.txt").readText()
     val client = Client(token) {
         withDefaultCommands()
+        commandPrefix = commandPrefix + "/kooky:"
     }
     client.eventManager.addClassListener(MyListener())
     val self = client.start()

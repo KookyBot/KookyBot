@@ -25,7 +25,6 @@ import io.github.kookybot.client.Client
 import io.github.kookybot.commands.CommandSource
 import io.github.kookybot.contract.Guild
 import io.github.kookybot.contract.GuildUser
-import io.github.kookybot.contract.PrivateChatUser
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.events.channel.*
 import io.github.kookybot.events.direct.DirectCancelReactionEvent
@@ -123,8 +122,6 @@ class EventManager(
     }
 
     fun parseCommand(event: MessageEvent) {
-        if (!client.config.enableCommand) return
-        if (client.config.commandPrefix.map { event.content.startsWith(it) }.find { it } == null) return
         val source = when (event) {
             is ChannelMessageEvent -> CommandSource(
                 type = CommandSource.Type.Channel,
@@ -140,8 +137,75 @@ class EventManager(
             )
             else -> throw Exception("invalid type")
         }
+        // quick commands.
+        classListeners.forEach {
+            try {
+                it.javaClass.methods.forEach { method ->
+                    if (method.annotations.find { it.annotationClass == EventHandler::class } != null) {
+                        try {
+                            val kotlinFilters = method.annotations.filter { it.annotationClass == Filter::class }
+                                .map { Filter::class.cast(it) }
+                            for (filter in kotlinFilters) {
+                                if (filter.requiredExecutor.v and source.type.v == 0) return
+                                filter.parse(event.content)?.toMutableMap()?.let { parsingResult ->
+                                    val args: MutableMap<KParameter, Any?> = mutableMapOf()
+                                    val func = method.kotlinFunction
+                                    parsingResult["source"] = source
+                                    if (func == null) return@let
+                                    if ((method.parameters.isNotEmpty()) && (!func.parameters.map {
+                                            it.name?.matches(
+                                                Regex("^arg\\d+$")
+                                            )
+                                        }.contains(false))) {
+                                        // java method, ordered.
+                                        method.invoke(it, *parsingResult.values.toTypedArray())
+                                    } else if (parsingResult.keys.containsAll(func.parameters.mapNotNull { it.name })) {
+                                        func.parameters.map { parameter ->
+                                            when (parameter.type.classifier) {
+                                                String::class -> {
+                                                    args[parameter] = parsingResult[parameter.name] as String
+                                                }
+                                                CommandSource::class -> {
+                                                    if (parameter.name == "source")
+                                                        args[parameter] = source
+                                                    else
+                                                        null
+                                                }
+                                                it::class -> {
+                                                    args[parameter] = it
+                                                }
+                                                else -> {
+                                                    throw Exception("unsupported type.")
+                                                }
+                                            }
+                                        }
+                                        try {
+                                            func.callBy(args)
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                }
+                            }
+
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        if (!client.config.enableCommand) return
+        if (client.config.commandPrefix.map { event.content.startsWith(it) }.find { it } == null) return
         try {
-            dispatcher.execute(event.content.substring(1), source)
+            dispatcher.execute(event.content.substring(
+                // 保证优先匹配最长的
+                client.config.commandPrefix.sortedBy { -it.length }.filter { event.content.startsWith(it) }
+                    .first().length
+            ), source
+            )
         } catch (e: CommandSyntaxException) {
             if (client.config.responseCommandExceptions) {
                 when (event) {
@@ -202,66 +266,6 @@ class EventManager(
                         try {
                             if (method.parameterTypes[0] == T::class.java) {
                                 method.invoke(it, event)
-                            } else if (event is ChannelMessageEvent || event is DirectMessageEvent) {
-                                event as MessageEvent
-                                val kotlinFilters = method.annotations.filter { it.annotationClass == Filter::class }
-                                    .map { Filter::class.cast(it) }
-                                for (filter in kotlinFilters) {
-                                    filter.parse(event.content)?.toMutableMap()?.let { parsingResult ->
-                                        val args: MutableMap<KParameter, Any?> = mutableMapOf()
-                                        val func = method.kotlinFunction
-                                        val source = when (event) {
-                                            is ChannelMessageEvent -> CommandSource(
-                                                type = CommandSource.Type.Channel,
-                                                channel = event.channel,
-                                                user = event.sender,
-                                                timestamp = event.timestamp.toLong()
-                                            )
-                                            is DirectMessageEvent -> CommandSource(
-                                                type = CommandSource.Type.Private,
-                                                user = event.sender,
-                                                private = event.sender,
-                                                timestamp = event.timestamp.toLong()
-                                            )
-                                            else -> throw Exception("invalid type")
-                                        }
-                                        parsingResult["source"] = source
-                                        if (func == null) return@let
-                                        if ((method.parameters.isNotEmpty()) && (!func.parameters.map {
-                                                it.name?.matches(
-                                                    Regex("^arg\\d+$")
-                                                )
-                                            }.contains(false))) {
-                                            // java method, ordered.
-                                            method.invoke(it, *parsingResult.values.toTypedArray())
-                                        } else if (parsingResult.keys.containsAll(func.parameters.mapNotNull { it.name })) {
-                                            func.parameters.map { parameter ->
-                                                when (parameter.type.classifier) {
-                                                    String::class -> {
-                                                        args[parameter] = parsingResult[parameter.name] as String
-                                                    }
-                                                    CommandSource::class -> {
-                                                        if (parameter.name == "source")
-                                                            args[parameter] = source
-                                                        else
-                                                            null
-                                                    }
-                                                    it::class -> {
-                                                        args[parameter] = it
-                                                    }
-                                                    else -> {
-                                                        throw Exception("unsupported type.")
-                                                    }
-                                                }
-                                            }
-                                            try {
-                                                func.callBy(args)
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
-                                            }
-                                        }
-                                    }
-                                }
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -289,7 +293,7 @@ class EventManager(
                         MessageEvent.ChannelType.GROUP -> client.self!!.guilds.map {
                             it.value.lazyChannels[json["target_id"].asString]?.value
                         }.first { it != null } as TextChannel
-                        MessageEvent.ChannelType.PERSON -> client.self!!.chattingUsers[json["target_id"].asString]!!.value as PrivateChatUser
+                        MessageEvent.ChannelType.PERSON -> client.self!!.chattingUsers[json["target_id"].asString]!!.value
                         else -> throw Exception("Invalid channel type.")
                     },
                     content = json.get("content").asString

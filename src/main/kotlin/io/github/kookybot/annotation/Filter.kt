@@ -16,8 +16,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.kookybot.annotation
 
+import io.github.kookybot.commands.CommandSource
+
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class Filter(
     val pattern: String,
+    val requiredExecutor: CommandSource.Type = CommandSource.Type._All,
 )

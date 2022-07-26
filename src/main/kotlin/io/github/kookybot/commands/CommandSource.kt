@@ -16,47 +16,56 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 package io.github.kookybot.commands
 
+import io.github.kookybot.commands.CommandSource.Type.*
 import io.github.kookybot.contract.PrivateChatUser
 import io.github.kookybot.contract.TextChannel
 import io.github.kookybot.contract.User
 import org.slf4j.LoggerFactory
 
 class CommandSource(
-    val type: Type = Type.Console,
+    val type: Type = Console,
     val channel: TextChannel? = null,
     val private: PrivateChatUser? = null,
     val user: User? = null,
     val timestamp: Long,
 ) {
-    enum class Type {
-        Console,
-        Private,
-        Channel
+    /** [_All]等以下划线为前缀类型只用来选择快捷命令何时被执行，不回作为参数传递
+     */
+    enum class Type(val v: Int) {
+        Console(1),
+        Private(2),
+        Channel(4),
+        _Console_Private(3),
+        _Console_Channel(5),
+        _Private_Channel(6),
+        _All(255)
     }
 
     fun sendMessage(message: String) {
         when (type) {
-            Type.Console -> LoggerFactory.getLogger("Command").info(message)
-            Type.Channel -> channel!!.sendMessage("(met)${user!!.id}(met)$message")
-            Type.Private -> private!!.sendMessage(message)
+            Console -> LoggerFactory.getLogger("Command").info(message)
+            Channel -> channel!!.sendMessage("(met)${user!!.id}(met)$message")
+            Private -> private!!.sendMessage(message)
+            else -> throw NotImplementedError("Invalid type.")
         }
     }
 
     fun hasPermission(permission: String): Boolean {
         return when (type) {
-            Type.Console -> true
-            Type.Channel -> channel!!.client.permissionManager.hasPermission(
+            Console -> true
+            Channel -> channel!!.client.permissionManager.hasPermission(
                 permission,
                 user!!.id,
                 channel.guild.id,
                 channel.id
             )
-            Type.Private -> private!!.client.permissionManager.hasPermission(permission, user!!.id)
+            Private -> private!!.client.permissionManager.hasPermission(permission, user!!.id)
+            else -> throw NotImplementedError("Invalid type.")
         }
     }
 
     fun setGlobalPermission(permission: String, value: Boolean?) {
-        if (type == Type.Console) {
+        if (type == Console) {
             throw Exception("Cannot set console permissions.")
         }
         user!!.client.permissionManager.setPermission(
@@ -67,7 +76,7 @@ class CommandSource(
     }
 
     fun setChannelPermission(permission: String, value: Boolean?) {
-        if (type != Type.Channel) {
+        if (type != Channel) {
             throw Exception("Cannot set user permissions.")
         }
         user!!.client.permissionManager.setPermission(
@@ -79,7 +88,7 @@ class CommandSource(
     }
 
     fun setGuildPermission(permission: String, value: Boolean?) {
-        if (type != Type.Channel) {
+        if (type != Channel) {
             throw Exception("Cannot set user permissions.")
         }
         user!!.client.permissionManager.setPermission(
