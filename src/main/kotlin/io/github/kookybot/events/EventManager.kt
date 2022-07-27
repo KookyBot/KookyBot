@@ -340,9 +340,9 @@ class EventManager(
                 "message_btn_click" -> {
                     val cardButtonClickEvent = Gson().fromJson(json, CardButtonClickEvent::class.java)
                     cardButtonClickEvent.channel =
-                        client.self!!.getChannel(event.extra.get("target_id").asString) as TextChannel
+                        client.self!!.getChannel(event.extra.get("target_id").asString) as TextChannel?
                     cardButtonClickEvent.sender = client.self!!.getUser(event.extra.get("user_id").asString)
-                    cardButtonClickEvent.targetId = event.extra.get("msg_id").asString
+                    cardButtonClickEvent.clickedMessageId = event.extra.get("msg_id").asString
                     cardButtonClickEvent.value = event.extra.get("value").asString
                     cardButtonClickEvent.self = client.self!!
                     callEvent(cardButtonClickEvent)

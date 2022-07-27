@@ -86,10 +86,7 @@ open class User(
         internal set
 
     override fun sendMessage(message: Message): SelfMessage {
-        return client.sendUserMessage(
-            target = this,
-            content = message.content()
-        )
+        return message.send2User(this)
     }
 
     fun talkTo(): PrivateChatUser {

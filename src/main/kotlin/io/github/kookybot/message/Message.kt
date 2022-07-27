@@ -36,12 +36,14 @@ abstract class Message(
             content = content()
         )
     }
+
     open fun send(messageReceiver: MessageReceiver) {
         if (messageReceiver is TextChannel) {
             send2Channel(messageReceiver)
         }
     }
-    open fun copy(): Message{
+
+    open fun copy(): Message {
         return object : Message(client, quote) {
             val content = this@Message.content()
             override val type: Int = this@Message.type
@@ -50,8 +52,9 @@ abstract class Message(
             }
         }
     }
-    open fun send2User(user: User) {
-        client.sendUserMessage(
+
+    open fun send2User(user: User): SelfMessage {
+        return client.sendUserMessage(
             target = user,
             content = content(),
             type = type,
