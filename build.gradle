@@ -2,6 +2,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.7.0'
     id "org.jetbrains.dokka" version "1.7.0"
     id 'maven-publish'
+    id 'signing'
 }
 
 group property('group')
@@ -57,12 +58,18 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = '17'
 }
 
-java {
+/*java {
     withSourcesJar()
-}
+    withJavadocJar()
+}*/
 
 dokkaJavadoc {
     outputDirectory = javadoc.destinationDir
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
 }
 
 publishing {
@@ -82,6 +89,10 @@ task generateJavadoc(type: Jar, dependsOn: dokkaJavadoc) {
 artifacts {
     archives generateJavadoc //javadocJar
     archives sourcesJar
+}
+
+signing {
+    sign configuration.artifacts
 }
 /*
 jar {
