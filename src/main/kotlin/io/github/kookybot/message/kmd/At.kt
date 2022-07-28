@@ -14,32 +14,31 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-package io.github.kookybot.message
+package io.github.kookybot.message.kmd
 
 import io.github.kookybot.contract.GuildRole
 import io.github.kookybot.contract.GuildUser
 
-object AtAll : MessageComponent() {
+class AtAll : MessageComponent() {
     override fun toMarkdown(): String {
         return "(met)all(met)"
     }
 }
-object AtHere : MessageComponent() {
+
+class AtHere : MessageComponent() {
     override fun toMarkdown(): String {
         return "(met)here(met)"
     }
 }
-fun At(user: GuildUser): MessageComponent {
-    return object : MessageComponent() {
-        override fun toMarkdown(): String {
-            return "(met)${user.id}(met)"
-        }
+
+class AtUser(val user: GuildUser) : MessageComponent() {
+    override fun toMarkdown(): String {
+        return "(met)${user.id}(met)"
     }
 }
-fun At(role: GuildRole): MessageComponent {
-    return object : MessageComponent() {
-        override fun toMarkdown(): String {
-            return "(rol)${role.id}(rol)"
-        }
+
+class AtRole(val role: GuildRole) : MessageComponent() {
+    override fun toMarkdown(): String {
+        return "(rol)${role.id}(rol)"
     }
 }

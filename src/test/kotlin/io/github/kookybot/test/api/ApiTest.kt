@@ -37,9 +37,33 @@ public class MyListener : Listener {
     }
 
     @EventHandler
-    @Filter(".test")
+    @Filter(pattern = ".card", requiredExecutor = CommandSource.Type.Private)
     fun test(source: CommandSource) {
-        source.sendMessage("test")
+        source.private!!.sendCardMessage {
+            Card {
+                SectionModule(
+                    text = PlainTextElement("test"),
+                    accessory = ButtonElement(
+                        text = PlainTextElement("test"),
+                        onclick = {
+                            it.sender.talkTo().sendMessage("test")
+                        }
+                    )
+                )
+            }
+        }
+    }
+
+    @EventHandler
+    @Filter(pattern = ".view {id,[\\d-]+}", requiredExecutor = CommandSource.Type.Channel)
+    fun view(id: String, source: CommandSource) {
+        source.sendMessage(
+            "```\n" +
+                    source.user!!.client.run {
+                        sendRequest(requestBuilder(Client.RequestType.MESSAGE_VIEW, "msg_id" to id))
+                    }["content"].asString
+                    + "\n```\n"
+        )
     }
 }
 
@@ -48,13 +72,12 @@ suspend fun main() {
     val token = File("data/token.txt").readText()
     val client = Client(token) {
         withDefaultCommands()
-        commandPrefix = commandPrefix + "/kooky:"
+        commandPrefix = (commandPrefix + "/kooky:") + "\\/"
     }
     client.eventManager.addClassListener(MyListener())
     val self = client.start()
     val logger = LoggerFactory.getLogger("ApiTest")
     self.setListening(singer = "洛天依", name = "十周年快乐！")
-
     client.eventManager.dispatcher.run {
         register(literal<CommandSource?>("test")
             .then(literal<CommandSource?>("add_channel")
@@ -67,7 +90,33 @@ suspend fun main() {
             )
         )
     }
-
+    client.eventManager.addListener<ChannelMessageEvent> {
+        if (content != "!card") return@addListener
+        var count = 0
+        var e: SelfMessage? = null
+        fun card(): CardMessage {
+            return CardMessage(client) {
+                Card {
+                    CountdownModule(
+                        mode = "hour",
+                        endTime = Calendar.getInstance().timeInMillis + 61000 - count * 1000,
+                        startTime = Calendar.getInstance().timeInMillis + 1000
+                    )
+                    SectionModule(
+                        text = PlainTextElement("click to sub by 1"),
+                        accessory = ButtonElement(
+                            text = PlainTextElement("awa"),
+                            onclick = {
+                                count++
+                                e!!.edit(card().content())
+                            }
+                        )
+                    )
+                }
+            }
+        }
+        e = channel.sendMessage(card())
+    }
     client.addCommand { dispatcher ->
         dispatcher.register(
             literal<CommandSource?>("lottery")
@@ -81,58 +130,64 @@ suspend fun main() {
                                             it.run {
                                                 if (source.channel == null) {
                                                     return@executes 0
-                                }
-                                val list: MutableList<String> = mutableListOf()
-                                val num = IntegerArgumentType.getInteger(it, "nums")
-                                val name = StringArgumentType.getString(it, "name")
-                                source.channel!!.sendCardMessage {
-                                    Card {
-                                        HeaderModule(PlainTextElement(name))
-                                        CountdownModule(
-                                            mode = "hour",
-                                            startTime = Calendar.getInstance().timeInMillis + 1000,
-                                            endTime = Calendar.getInstance().timeInMillis + (IntegerArgumentType.getInteger(
-                                                it,
-                                                "time") * 1000) + 1000,
-                                        )
-                                        SectionModule(
-                                            PlainTextElement("点击右侧按钮参与抽奖"),
-                                            ButtonElement(
-                                                text = PlainTextElement("Click"),
-                                                onclick = {
-                                                    if (!list.contains(it.sender.id)) {
-                                                        it.channel!!.sendMessage(
-                                                            "参与成功",
-                                                            it.sender.atGuild(source.channel!!.guild)
+                                                }
+                                                val list: MutableList<String> = mutableListOf()
+                                                val num = IntegerArgumentType.getInteger(it, "nums")
+                                                val name = StringArgumentType.getString(it, "name")
+                                                source.channel!!.sendCardMessage {
+                                                    Card {
+                                                        HeaderModule(PlainTextElement(name))
+                                                        CountdownModule(
+                                                            mode = "hour",
+                                                            startTime = Calendar.getInstance().timeInMillis + 1000,
+                                                            endTime = Calendar.getInstance().timeInMillis + (IntegerArgumentType.getInteger(
+                                                                it,
+                                                                "time"
+                                                            ) * 1000) + 1000,
                                                         )
-                                                        list.add(it.sender.id)
-                                                    } else {
-                                                        it.channel!!.sendMessage(
-                                                            "你已经参与过了",
-                                                            it.sender.atGuild(source.channel!!.guild)
+                                                        SectionModule(
+                                                            PlainTextElement("点击右侧按钮参与抽奖"),
+                                                            ButtonElement(
+                                                                text = PlainTextElement("Click"),
+                                                                onclick = {
+                                                                    if (!list.contains(it.sender.id)) {
+                                                                        it.channel!!.sendMessage(
+                                                                            "参与成功",
+                                                                            it.sender.atGuild(source.channel!!.guild)
+                                                                        )
+                                                                        list.add(it.sender.id)
+                                                                    } else {
+                                                                        it.channel!!.sendMessage(
+                                                                            "你已经参与过了",
+                                                                            it.sender.atGuild(source.channel!!.guild)
+                                                                        )
+                                                                    }
+                                                                })
                                                         )
                                                     }
-                                                })
-                                        )
-                                    }
-                                }
-                                Thread {
-                                    Thread.sleep((IntegerArgumentType.getInteger(it, "time") * 1000L + 1000))
-                                    val winners: MutableList<String> = mutableListOf()
-                                    for (ignored in (0 until num)) {
-                                        if (list.isNotEmpty()) {
-                                            val id = list.random()
-                                            winners.add(id)
-                                            list.removeAll(listOf(id))
-                                        }
-                                    }
-                                    source.channel!!.sendMessage(
-                                        "恭喜以下参与者获得 **${name}**：" +
-                                                winners.joinToString {
-                                                    "(met)$it(met)"
                                                 }
-                                    )
-                                }.start()
+                                                Thread {
+                                                    Thread.sleep(
+                                                        (IntegerArgumentType.getInteger(
+                                                            it,
+                                                            "time"
+                                                        ) * 1000L + 1000)
+                                                    )
+                                                    val winners: MutableList<String> = mutableListOf()
+                                                    for (ignored in (0 until num)) {
+                                                        if (list.isNotEmpty()) {
+                                                            val id = list.random()
+                                                            winners.add(id)
+                                                            list.removeAll(listOf(id))
+                                                        }
+                                                    }
+                                                    source.channel!!.sendMessage(
+                                                        "恭喜以下参与者获得 **${name}**：" +
+                                                                winners.joinToString {
+                                                                    "(met)$it(met)"
+                                                                }
+                                                    )
+                                                }.start()
                                             }
                                             0
                                         }

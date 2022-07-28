@@ -38,3 +38,7 @@ open class JavaBaseClass() {
         }
     }
 }
+
+fun JavaBaseClass.cnt(client: Client) {
+    JavaBaseClass.connectWebsocket(client)
+}

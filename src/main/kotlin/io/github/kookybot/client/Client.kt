@@ -55,8 +55,6 @@ import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.zip.InflaterInputStream
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.jvm.optionals.getOrNull
 import kotlin.system.exitProcess
 
@@ -84,10 +82,10 @@ enum class ResumeStatus {
 
 class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = null) {
     internal val logger = LoggerFactory.getLogger(Client::class.java)
-    private val context: CoroutineContext = EmptyCoroutineContext
     private var lastSn = 0
     private var sessionId = ""
-    var resumeStatus: ResumeStatus = None
+    private val snCache: MutableList<JsonObject> = mutableListOf()
+    var resumeStatus = None
     var pingDelay = 0L
     var status = State.Initialized
     var pingStatus = PingState.Success
@@ -96,6 +94,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
     private val httpClient = HttpClient.newHttpClient()
     internal val config = ConfigureScope(this)
     var currentVoiceChannel: VoiceChannel? = null
+    internal var delay = 0L
 
     // for init
     internal var selfId = ""
@@ -110,13 +109,16 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         if (config.botMarketUUID != "") {
             GlobalScope.launch {
                 while (true) {
-                    httpClient.send(
-                        HttpRequest.newBuilder()
-                            .uri(URI("http://bot.gekj.net/api/v1/online.bot"))
-                            .header("uuid", config.botMarketUUID)
-                            .build(), BodyHandlers.ofString()
-                    ).body()
-                    delay(30 * 60)
+                    withContext(Dispatchers.IO) {
+                        httpClient.send(
+                            HttpRequest.newBuilder()
+                                .uri(URI("http://bot.gekj.net/api/v1/online.bot"))
+                                .GET()
+                                .header("uuid", config.botMarketUUID)
+                                .build(), BodyHandlers.ofString()
+                        )
+                    }.body()
+                    delay(30 * 60 * 1000)
                 }
             }
         }
@@ -262,7 +264,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                 register(LiteralArgumentBuilder.literal<CommandSource?>("ping")
                     .executes {
                         it.source.sendMessage(
-                            "pong, delay is ${Calendar.getInstance().timeInMillis - it.source.timestamp}ms"
+                            "pong, delay is ${Calendar.getInstance().timeInMillis + delay - it.source.timestamp}ms"
                         )
                         0
                     }
@@ -319,8 +321,10 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                 if (resumeStatus != None) continue
                 logger.debug("ping")
                 pingStatus = PingState.Pinging
+                snCache.clear()
                 webSocketClient?.send("{\"s\":2,\"sn\":$lastSn}")
                 pingStart = Calendar.getInstance().timeInMillis
+                @Suppress("ControlFlowWithEmptyBody")
                 while (pingStatus == PingState.Pinging && Calendar.getInstance().timeInMillis < pingStart + 6000) {
                 }
                 if (Calendar.getInstance().timeInMillis >= pingStart + 6000) {
@@ -333,6 +337,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
             }
         }
     }
+
 
     /**
      * 警告：
@@ -385,6 +390,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
         CANCEL_REACTION,
         ACTIVITY,
         CHANNEL_ROLE_INDEX,
+        MESSAGE_VIEW
     }
 
     private fun apiOf(path: String): URI {
@@ -494,6 +500,7 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                 .header("content-type", "application/json")
                 .POST(postAll(values!!))
             CHANNEL_ROLE_INDEX -> builder.uri(apiOf("/channel-role/index?channel_id=${values!!["channel_id"]}")).GET()
+            MESSAGE_VIEW -> builder.uri(apiOf("/message/view?msg_id=${values!!["msg_id"]}")).GET()
         }
         return builder.build()
     }
@@ -558,9 +565,19 @@ class Client(var token: String, var configure: (ConfigureScope.() -> Unit)? = nu
                 resumeStatus = None
                 when (json.get("s").asInt) {
                     0 -> {
-                        lastSn = json.get("sn").asInt
-                        json = json["d"].asJsonObject
-                        eventManager.callEventRaw(json)
+                        val thisSn = json.get("sn").asInt
+                        fun proc(json: JsonObject) {
+                            eventManager.callEventRaw(json["d"].asJsonObject)
+                            lastSn = json.get("sn").asInt
+                        }
+                        if (thisSn == lastSn + 1) {
+                            proc(json)
+                            while (snCache.isNotEmpty()) {
+                                proc(snCache.removeAt(0))
+                            }
+                        } else {
+                            snCache.add(json)
+                        }
                     }
                     1 -> {
                         when (val code = json["d"].asJsonObject["code"].asInt) {

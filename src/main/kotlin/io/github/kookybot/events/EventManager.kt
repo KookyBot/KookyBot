@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
-import kotlin.reflect.cast
 import kotlin.reflect.jvm.kotlinFunction
 import io.github.kookybot.events.Listener as Listener1
 
@@ -138,71 +137,66 @@ class EventManager(
             else -> throw Exception("invalid type")
         }
         // quick commands.
-        classListeners.forEach {
-            try {
-                it.javaClass.methods.forEach { method ->
-                    if (method.annotations.find { it.annotationClass == EventHandler::class } != null) {
-                        try {
-                            val kotlinFilters = method.annotations.filter { it.annotationClass == Filter::class }
-                                .map { Filter::class.cast(it) }
-                            for (filter in kotlinFilters) {
-                                if (filter.requiredExecutor.v and source.type.v == 0) return
-                                if (!source.hasPermission(filter.requiredPermission)) return
-                                if (!source.hasPermission(filter.requiredPermission)) return
-                                filter.parse(event.content)?.toMutableMap()?.let { parsingResult ->
-                                    val args: MutableMap<KParameter, Any?> = mutableMapOf()
-                                    val func = method.kotlinFunction
-                                    parsingResult["source"] = source
-                                    if (func == null) return@let
-                                    if ((method.parameters.isNotEmpty()) && (!func.parameters.map {
-                                            it.name?.matches(
-                                                Regex("^arg\\d+$")
-                                            )
-                                        }.contains(false))) {
-                                        // java method, ordered.
-                                        method.invoke(it, *parsingResult.values.toTypedArray())
-                                    } else if (parsingResult.keys.containsAll(func.parameters.mapNotNull { it.name })) {
-                                        func.parameters.map { parameter ->
-                                            when (parameter.type.classifier) {
-                                                String::class -> {
-                                                    args[parameter] = parsingResult[parameter.name] as String
-                                                }
-                                                CommandSource::class -> {
-                                                    if (parameter.name == "source")
-                                                        args[parameter] = source
-                                                    else
-                                                        null
-                                                }
-                                                it::class -> {
-                                                    args[parameter] = it
-                                                }
-                                                else -> {
-                                                    throw Exception("unsupported type.")
-                                                }
-                                            }
+        classListeners.forEach { listener ->
+            listener.javaClass.methods.forEach { method ->
+                try {
+                    val kotlinFilters = method.annotations.filter { it.annotationClass == Filter::class }
+                        .map { it as Filter }
+                    for (filter in kotlinFilters) {
+                        println(filter.pattern)
+                        if (filter.requiredExecutor.v and source.type.v == 0) continue
+                        if (!source.hasPermission(filter.requiredPermission)) continue
+                        filter.parse(event.content)?.toMutableMap()?.let { parsingResult ->
+                            val args: MutableMap<KParameter, Any?> = mutableMapOf()
+                            val func = method.kotlinFunction
+                            parsingResult["source"] = source
+                            if (func == null) return@let
+                            if ((method.parameters.isNotEmpty()) && (!func.parameters.map {
+                                    it.name?.matches(
+                                        Regex("^arg\\d+$")
+                                    )
+                                }.contains(false))) {
+                                // java method, ordered.
+                                method.invoke(listener, *parsingResult.values.toTypedArray())
+                            } else if (parsingResult.keys.containsAll(func.parameters.mapNotNull { it.name })) {
+                                func.parameters.map { parameter ->
+                                    when (parameter.type.classifier) {
+                                        String::class -> {
+                                            args[parameter] = parsingResult[parameter.name] as String
                                         }
-                                        try {
-                                            func.callBy(args)
-                                        } catch (e: Exception) {
-                                            e.printStackTrace()
+                                        CommandSource::class -> {
+                                            if (parameter.name == "source")
+                                                args[parameter] = source
+                                            else
+                                                null
+                                        }
+                                        listener::class -> {
+                                            args[parameter] = listener
+                                        }
+                                        else -> {
+                                            throw Exception("unsupported type.")
                                         }
                                     }
                                 }
+                                try {
+                                    func.callBy(args)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
                             }
-
-                        } catch (e: Exception) {
-                            e.printStackTrace()
                         }
                     }
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
         if (!client.config.enableCommand) return
         if (client.config.commandPrefix.map { event.content.startsWith(it) }.find { it } == null) return
         try {
-            dispatcher.execute(event.content.substring(
+            dispatcher.execute(
+                event.content.substring(
                 // 保证优先匹配最长的
                 client.config.commandPrefix.sortedBy { -it.length }.filter { event.content.startsWith(it) }
                     .first().length

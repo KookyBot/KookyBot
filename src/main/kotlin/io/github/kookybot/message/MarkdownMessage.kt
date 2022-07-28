@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 package io.github.kookybot.message
 
 import io.github.kookybot.client.Client
+import io.github.kookybot.message.kmd.MessageComponent
 
 class MarkdownMessage(
     client: Client,

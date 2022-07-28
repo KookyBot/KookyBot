@@ -29,6 +29,12 @@ public class JavaApiTest extends JavaBaseClass {
         }
 
         @EventHandler
+        @Filter(pattern = "{msg,.+}")
+        public void any(String msg, CommandSource source) {
+            source.sendMessage("hello");
+        }
+
+        @EventHandler
         public void onHello(ChannelMessageEvent event) {
             if (event.getContent().contains("hello")) {
                 event.getChannel().sendCardMessage(null, messageScope -> {
