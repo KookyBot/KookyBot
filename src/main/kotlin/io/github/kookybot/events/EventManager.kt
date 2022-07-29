@@ -80,6 +80,7 @@ fun Filter.parse(input: String): Map<String, Any>? {
         }
         start = result.range.last + 1
     }
+    if (start != input.length) return null
     return ret
 }
 class SingleEventHandler<T>(
